@@ -145,7 +145,7 @@ export default async function HomePage() {
 
 
       {/* Combo Offers */}
-      {plainCombos?.length > 0 && (
+      {/* {plainCombos?.length > 0 && (
         <section className="py-16 bg-white border-t border-neutral-100">
           <div className="max-w-6xl mx-auto px-4">
             <div className="flex flex-col items-center text-center mb-8">
@@ -185,9 +185,9 @@ export default async function HomePage() {
                     href={`/combo/${c.slug}`}
                     className={`group relative rounded-xl overflow-hidden transition-colors ${isFeatured ? 'sm:col-span-1 row-span-1' : ''}`}
                     style={{ border: `1px solid ${HAIRLINE}` }}
-                  >
+                  > */}
                     {/* Image */}
-                    <div className={`relative w-full overflow-hidden bg-neutral-50 ${isFeatured ? 'aspect-[4/5]' : 'aspect-square'}`}>
+                    {/* <div className={`relative w-full overflow-hidden bg-neutral-50 ${isFeatured ? 'aspect-[4/5]' : 'aspect-square'}`}>
                       {c.image && (
                         <img
                           src={c.image}
@@ -203,10 +203,10 @@ export default async function HomePage() {
                           <Tag size={9} /> {pct}% off
                         </div>
                       )}
-                    </div>
+                    </div> */}
 
                     {/* Info */}
-                    <div className="p-3 bg-white">
+                    {/* <div className="p-3 bg-white">
                       <p className="text-sm font-bold line-clamp-1" style={{ color: COFFEE, fontFamily: FONT_SANS }}>{c.name}</p>
                       <div className="flex items-center gap-2 mt-1">
                         <span className="font-bold text-sm" style={{ color: COFFEE, fontFamily: FONT_SANS }}>{formatINR(c.comboPrice)}</span>
@@ -228,13 +228,13 @@ export default async function HomePage() {
             </div>
           </div>
         </section>
-      )}
+      )} */}
 
       {/* Reviews */}
-      <ReviewSection reviews={JSON.parse(JSON.stringify(reviews))} />
+      {/* <ReviewSection reviews={JSON.parse(JSON.stringify(reviews))} /> */}
 
       {/* Reels */}
-      <ReelsSection reels={JSON.parse(JSON.stringify(reels))} />
+      {/* <ReelsSection reels={JSON.parse(JSON.stringify(reels))} /> */}
 
     </div>
   );

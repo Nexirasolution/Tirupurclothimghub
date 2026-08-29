@@ -6,11 +6,14 @@ import { Home, ClipboardList, Heart, ShoppingBag } from 'lucide-react';
 import { useCart } from '@/components/CartContext';
 import { useWishlist } from '@/components/WhishlistContext';
 
-// Design tokens — shared with ReviewSection / BannerCarousel for a consistent system
-const INK = '#241B21';
-const ROSE = '#E24C6B';
-const BLUSH = '#F6C9D3';
-const PAPER = '#FFFFFF';
+// Design tokens — same peach + coffee system as the Footer: a deeper, duskier
+// peach field, white for the default/active label and icon color, and a
+// light-coffee/latte accent reserved for the active indicator and badges.
+const PEACH = '#D9946A';        // background — deeper, duskier peach
+const COFFEE_LIGHT = '#E4C4A1'; // accent — active underline, badge
+const WHITE = '#FFFFFF';        // icon + label color
+const WHITE_SOFT = 'rgba(255,255,255,0.65)'; // inactive label opacity baseline
+const LINE = 'rgba(255,255,255,0.22)';       // hairline top border
 
 export default function BottomNav() {
   const pathname = usePathname();
@@ -32,7 +35,7 @@ export default function BottomNav() {
   return (
     <nav
       className="md:hidden fixed bottom-0 left-0 right-0 z-50 pb-[env(safe-area-inset-bottom)]"
-      style={{ background: PAPER, borderTop: `1px solid ${BLUSH}` }}
+      style={{ background: PEACH, borderTop: `1px solid ${LINE}` }}
     >
       <div className="flex items-stretch justify-between px-1">
         {items.map(({ href, label, icon: Icon, badge }) => {
@@ -46,7 +49,7 @@ export default function BottomNav() {
               {active && (
                 <span
                   className="absolute top-0 left-[30%] right-[30%] h-[2px]"
-                  style={{ background: ROSE }}
+                  style={{ background: COFFEE_LIGHT }}
                 />
               )}
 
@@ -54,13 +57,13 @@ export default function BottomNav() {
                 <Icon
                   size={20}
                   strokeWidth={active ? 2 : 1.5}
-                  style={{ color: active ? ROSE : INK }}
-                  fill={active && label === 'Wishlist' ? ROSE : 'none'}
+                  style={{ color: WHITE, opacity: active ? 1 : 0.65 }}
+                  fill={active && label === 'Wishlist' ? WHITE : 'none'}
                 />
                 {badge > 0 && (
                   <span
-                    className="absolute -top-1.5 -right-2 text-white text-[8px] font-semibold leading-none rounded-full min-w-[13px] h-[13px] flex items-center justify-center px-[3px]"
-                    style={{ background: ROSE, border: `1px solid ${PAPER}` }}
+                    className="absolute -top-1.5 -right-2 text-[8px] font-semibold leading-none rounded-full min-w-[13px] h-[13px] flex items-center justify-center px-[3px]"
+                    style={{ background: COFFEE_LIGHT, color: '#4A3226', border: `1px solid ${PEACH}` }}
                   >
                     {badge > 9 ? '9+' : badge}
                   </span>
@@ -69,7 +72,7 @@ export default function BottomNav() {
 
               <span
                 className="text-[9px] font-medium tracking-wide"
-                style={{ color: active ? ROSE : INK, opacity: active ? 1 : 0.65 }}
+                style={{ color: WHITE, opacity: active ? 1 : 0.65 }}
               >
                 {label}
               </span>
