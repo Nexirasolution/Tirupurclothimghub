@@ -1,5 +1,12 @@
 'use client';
 
+// Design tokens — same white/peach minimalist system as the product page.
+const INK = '#241B21';
+const INK_SOFT = '#9C877D';
+const PEACH = '#D9946A';
+const LINE = '#EEE3DA';
+const PAPER = '#FFFFFF';
+
 export default function ColorSizeSelector({ variants, activeVariant, onColorChange, activeSize, onSizeChange, categoryType }) {
   const isJewellery = categoryType === 'jewellery';
   const sizeStock = (size) => activeVariant?.sizes?.find((s) => s.size === size)?.stock ?? 0;
@@ -7,76 +14,62 @@ export default function ColorSizeSelector({ variants, activeVariant, onColorChan
   const hasColors = variants?.some((v) => v.color && v.color.trim());
 
   return (
-    <div className="space-y-5 p-4 rounded-xl bg-pink-50/50 border border-pink-100">
+    <div className="space-y-6">
 
       {/* Color selector */}
       {hasColors && (
-        <>
-          <div>
-            <p className="text-sm font-semibold mb-2.5 text-neutral-900">
-              {isJewellery ? 'Material/Colour:' : 'Color:'}{' '}
-              <span className="text-pink-600">{activeVariant?.color}</span>
-            </p>
+        <div>
+          <p className="text-sm mb-2.5" style={{ color: INK_SOFT }}>
+            {isJewellery ? 'Material/Colour' : 'Color'}
+            {' '}
+            <span className="font-medium" style={{ color: INK }}>{activeVariant?.color}</span>
+          </p>
 
-            <div className="flex gap-2 flex-wrap">
-              {variants.map((v) => {
-                const isActive = activeVariant?._id === v._id;
-                return (
-                  <button
-                    key={v._id}
-                    onClick={() => onColorChange(v)}
-                    title={v.color}
-                    className="relative w-9 h-9 rounded-full transition-transform"
-                    style={{
-                      backgroundColor: v.colorHex || '#ccc',
-                      border: isActive ? '2px solid #DB2777' : '2px solid #fff',
-                      boxShadow: isActive ? '0 0 0 2px #DB2777' : '0 0 0 1px #e5e5e5',
-                      transform: isActive ? 'scale(1.12)' : 'scale(1)',
-                    }}
-                  >
-                    {isActive && (
-                      <span className="absolute inset-0 flex items-center justify-center text-white text-xs font-bold" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.4)' }}>
-                        ✓
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+          <div className="flex gap-2.5 flex-wrap">
+            {variants.map((v) => {
+              const isActive = activeVariant?._id === v._id;
+              return (
+                <button
+                  key={v._id}
+                  onClick={() => onColorChange(v)}
+                  title={v.color}
+                  className="relative w-8 h-8 rounded-full transition-transform"
+                  style={{
+                    backgroundColor: v.colorHex || '#ccc',
+                    boxShadow: isActive ? `0 0 0 2px ${PAPER}, 0 0 0 3.5px ${PEACH}` : `0 0 0 1px ${LINE}`,
+                    transform: isActive ? 'scale(1.08)' : 'scale(1)',
+                  }}
+                >
+                  {isActive && (
+                    <span className="absolute inset-0 flex items-center justify-center text-white text-[11px] font-bold" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.4)' }}>
+                      ✓
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
-
-          <div className="h-px bg-pink-100" />
-        </>
+        </div>
       )}
 
-      {/* Jewellery attribute chips */}
+      {/* Jewellery attributes — plain labels separated by a dot, no chips */}
       {isJewellery && (activeVariant?.material || activeVariant?.purity || activeVariant?.weight > 0) && (
-        <>
-          <div className="flex flex-wrap gap-2">
-            {activeVariant?.material && (
-              <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-white border border-pink-200 text-pink-600">
-                {activeVariant.material}
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm" style={{ color: INK_SOFT }}>
+          {[activeVariant?.material, activeVariant?.purity, activeVariant?.weight > 0 ? `${activeVariant.weight}g` : null]
+            .filter(Boolean)
+            .map((label, i, arr) => (
+              <span key={label} className="flex items-center gap-2">
+                <span style={{ color: INK }}>{label}</span>
+                {i < arr.length - 1 && <span style={{ color: LINE }}>·</span>}
               </span>
-            )}
-            {activeVariant?.purity && (
-              <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-white border border-pink-200 text-pink-600">
-                {activeVariant.purity}
-              </span>
-            )}
-            {activeVariant?.weight > 0 && (
-              <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-white border border-pink-200 text-pink-600">
-                {activeVariant.weight}g
-              </span>
-            )}
-          </div>
-          <div className="h-px bg-pink-100" />
-        </>
+            ))}
+        </div>
       )}
 
       {/* Size selector */}
       <div>
-        <p className="text-sm font-semibold mb-2.5 text-neutral-900">
-          {isJewellery ? 'Ring/Bangle Size:' : 'Size:'}
+        <p className="text-sm mb-2.5" style={{ color: INK_SOFT }}>
+          {isJewellery ? 'Ring/Bangle Size' : 'Size'}
         </p>
 
         <div className="flex gap-2 flex-wrap">
@@ -88,13 +81,15 @@ export default function ColorSizeSelector({ variants, activeVariant, onColorChan
                 key={s.size}
                 disabled={outOfStock}
                 onClick={() => onSizeChange(s.size)}
-                className={`min-w-[42px] h-[38px] px-2.5 rounded-lg text-sm font-medium transition-all border ${
-                  outOfStock
-                    ? 'border-neutral-100 bg-neutral-50 text-neutral-300 line-through cursor-not-allowed'
-                    : active
-                    ? 'border-pink-600 bg-pink-600 text-white'
-                    : 'border-neutral-200 bg-white text-neutral-700 hover:border-pink-300'
-                }`}
+                className="min-w-[40px] h-[36px] px-2.5 text-sm font-medium transition-colors"
+                style={{
+                  borderRadius: '4px',
+                  border: `1px solid ${outOfStock ? LINE : active ? INK : LINE}`,
+                  background: active ? INK : PAPER,
+                  color: outOfStock ? '#D6C9BE' : active ? PAPER : INK,
+                  textDecoration: outOfStock ? 'line-through' : 'none',
+                  cursor: outOfStock ? 'not-allowed' : 'pointer',
+                }}
               >
                 {s.size}
               </button>
@@ -103,13 +98,9 @@ export default function ColorSizeSelector({ variants, activeVariant, onColorChan
         </div>
 
         {activeSize && sizeStock(activeSize) <= 5 && sizeStock(activeSize) > 0 && (
-          <div className="mt-2 flex items-center gap-1.5 text-xs font-semibold rounded-r-md py-1.5 px-2.5 text-pink-600 bg-pink-50 border-l-2 border-pink-600">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
-              <line x1="12" y1="16" x2="12.01" y2="16"/>
-            </svg>
-            Only {sizeStock(activeSize)} left in stock!
-          </div>
+          <p className="mt-2.5 text-xs font-medium" style={{ color: PEACH }}>
+            Only {sizeStock(activeSize)} left in stock
+          </p>
         )}
       </div>
     </div>
