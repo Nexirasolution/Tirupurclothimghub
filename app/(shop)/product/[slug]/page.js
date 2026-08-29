@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Fraunces, Inter } from 'next/font/google';
-import { Star, ShoppingBag, Zap, Heart, Share2, ChevronLeft, ChevronRight, Tag } from 'lucide-react';
+import { Star, ShoppingBag, Zap, Heart, Share2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatINR } from '@/lib/utils';
 import { getSizeStock } from '@/lib/stock';
 import { useCart } from '@/components/CartContext';
@@ -14,19 +14,19 @@ import ProductCard from '@/components/ProductCard';
 import toast from 'react-hot-toast';
 
 // Typography — a deliberate pairing instead of system defaults: Fraunces
-// (a warm, slightly editorial serif with real personality in italics/weight)
 // for anything read as a headline, Inter for everything functional/UI.
 const display = Fraunces({ subsets: ['latin'], weight: ['400', '500'], style: ['normal', 'italic'], variable: '--font-display' });
 const body = Inter({ subsets: ['latin'], weight: ['400', '500', '600'], variable: '--font-body' });
 
-// Design tokens — shared across the site's white/pink design system
+// Design tokens — minimalist white/peach system. One accent color, one ink
+// color, and a single hairline tone — no badges, pills, or drop shadows.
 const INK = '#241B21';
-const INK_SOFT = '#A9808C';
-const ROSE = '#E24C6B';
-const BLUSH = '#FDE7EC';
-const BLUSH_LINE = '#F6C9D3';
+const INK_SOFT = '#9C877D';
+const PEACH = '#D9946A';
+const PEACH_WASH = '#FBE8D9';
+const LINE = '#EEE3DA';
 const PAPER = '#FFFFFF';
-const NEUTRAL = '#C7BDC1';
+const NEUTRAL = '#C7B9AC';
 
 export default function ProductPage() {
   const { slug } = useParams();
@@ -57,7 +57,7 @@ export default function ProductPage() {
     return (
       <div className={`${body.className} min-h-screen flex items-center justify-center`} style={{ background: PAPER }}>
         <div className="flex flex-col items-center gap-3" style={{ color: INK_SOFT }}>
-          <div className="w-7 h-7 border-2 rounded-full animate-spin" style={{ borderColor: BLUSH_LINE, borderTopColor: ROSE }} />
+          <div className="w-6 h-6 border rounded-full animate-spin" style={{ borderColor: LINE, borderTopColor: PEACH }} />
           <p className="text-sm">Loading product…</p>
         </div>
       </div>
@@ -149,197 +149,136 @@ export default function ProductPage() {
 
   return (
     <div className={`${body.className} ${display.variable}`} style={{ background: PAPER }}>
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 sm:pt-12 pb-24 sm:pb-16">
+      <div className="max-w-5xl mx-auto px-5 sm:px-8 pt-8 sm:pt-16 pb-24 sm:pb-20">
 
-        {/* Asymmetric layout: gallery takes more room and stays put while
-            details scroll past it on desktop — an editorial reading order
-            rather than two matched columns. */}
-        <div className="grid sm:grid-cols-12 gap-8 sm:gap-12">
+        {/* Even two-column split, generous gap, no sticky spine or gallery
+            chrome — the image and the details carry equal quiet weight. */}
+        <div className="grid sm:grid-cols-2 gap-10 sm:gap-16">
 
           {/* ── Gallery ── */}
-          <div className="sm:col-span-7 sm:sticky sm:top-6 sm:self-start">
-            <div className="flex gap-3 sm:gap-4">
+          <div className="sm:sticky sm:top-10 sm:self-start">
+            <div className="relative w-full aspect-[4/5] overflow-hidden" style={{ background: PEACH_WASH, borderRadius: '4px' }}>
+              {images[activeImage] && (
+                <Image
+                  src={images[activeImage]}
+                  alt={product.name}
+                  fill
+                  sizes="(max-width:640px) 100vw, 48vw"
+                  className="object-cover"
+                  priority
+                />
+              )}
 
-              {/* Signature element: category name run vertically along the
-                  spine of the image, like a garment tag or a magazine folio */}
-              <div className="hidden sm:flex items-center shrink-0 w-5">
-                <span
-                  className="text-[11px] font-medium uppercase whitespace-nowrap"
-                  style={{
-                    color: ROSE,
-                    letterSpacing: '0.22em',
-                    writingMode: 'vertical-rl',
-                    transform: 'rotate(180deg)',
-                  }}
-                >
-                  {product.category?.name}
-                </span>
-              </div>
+              {images.length > 1 && (
+                <>
+                  <button
+                    onClick={prevImage}
+                    className="absolute left-0 top-0 bottom-0 w-1/4 flex items-center justify-start pl-2 opacity-0 hover:opacity-100 transition-opacity"
+                    aria-label="Previous image"
+                  >
+                    <ChevronLeft size={18} strokeWidth={1.5} style={{ color: INK }} />
+                  </button>
+                  <button
+                    onClick={nextImage}
+                    className="absolute right-0 top-0 bottom-0 w-1/4 flex items-center justify-end pr-2 opacity-0 hover:opacity-100 transition-opacity"
+                    aria-label="Next image"
+                  >
+                    <ChevronRight size={18} strokeWidth={1.5} style={{ color: INK }} />
+                  </button>
 
-              <div className="flex-1 min-w-0">
-                <div className="relative w-full aspect-[3/4] rounded-lg overflow-hidden" style={{ background: BLUSH }}>
-                  {images[activeImage] && (
-                    <Image
-                      src={images[activeImage]}
-                      alt={product.name}
-                      fill
-                      sizes="(max-width:640px) 100vw, 58vw"
-                      className="object-cover"
-                      priority
-                    />
-                  )}
-
-                  {discount > 0 && (
-                    <div
-                      className="absolute top-3 left-3 text-[10px] font-semibold uppercase tracking-wider"
-                      style={{ color: PAPER, background: ROSE, padding: '4px 9px', borderRadius: '3px' }}
-                    >
-                      {discount}% off
-                    </div>
-                  )}
-
-                  <div className="absolute top-3 right-3 flex flex-col gap-3">
-                    <button
-                      onClick={() => { setWished((w) => !w); toast.success(wished ? 'Removed from wishlist' : 'Added to wishlist'); }}
-                      className="w-8 h-8 flex items-center justify-center active:scale-90 transition-transform"
-                      aria-label="Toggle wishlist"
-                    >
-                      <Heart
-                        size={18}
-                        style={{
-                          fill: wished ? ROSE : 'rgba(255,255,255,0.85)',
-                          color: wished ? ROSE : INK,
-                          filter: 'drop-shadow(0 1px 2px rgba(36,27,33,0.25))',
-                        }}
-                      />
-                    </button>
-                    <button
-                      onClick={handleShare}
-                      className="w-8 h-8 flex items-center justify-center active:scale-90 transition-transform"
-                      aria-label="Share"
-                    >
-                      <Share2 size={16} style={{ color: INK, filter: 'drop-shadow(0 1px 2px rgba(36,27,33,0.25))' }} />
-                    </button>
+                  {/* Plain numeric counter instead of dots or a pill */}
+                  <div
+                    className="absolute bottom-3 right-3 text-[11px] font-medium tracking-wide"
+                    style={{ color: INK }}
+                  >
+                    {String(activeImage + 1).padStart(2, '0')} / {String(images.length).padStart(2, '0')}
                   </div>
+                </>
+              )}
+            </div>
 
-                  {images.length > 1 && (
-                    <>
-                      <button
-                        onClick={prevImage}
-                        className="absolute left-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center"
-                        style={{ background: PAPER, color: ROSE, border: `1px solid ${BLUSH_LINE}` }}
-                        aria-label="Previous image"
-                      >
-                        <ChevronLeft size={16} strokeWidth={1.75} />
-                      </button>
-                      <button
-                        onClick={nextImage}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center"
-                        style={{ background: PAPER, color: ROSE, border: `1px solid ${BLUSH_LINE}` }}
-                        aria-label="Next image"
-                      >
-                        <ChevronRight size={16} strokeWidth={1.75} />
-                      </button>
-                    </>
-                  )}
-
-                  {images.length > 1 && (
-                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
-                      {images.map((_, i) => (
-                        <button
-                          key={i}
-                          onClick={() => setActiveImage(i)}
-                          className="rounded-full transition-all"
-                          style={{
-                            height: '3px',
-                            width: i === activeImage ? '20px' : '8px',
-                            background: i === activeImage ? ROSE : 'rgba(255,255,255,0.75)',
-                          }}
-                          aria-label={`Go to image ${i + 1}`}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {images.length > 1 && (
-                  <div className="flex gap-3 mt-3 overflow-x-auto no-scrollbar">
-                    {images.map((img, i) => (
-                      <button
-                        key={i}
-                        onClick={() => setActiveImage(i)}
-                        className="relative w-14 h-[70px] rounded-md overflow-hidden shrink-0 transition-opacity"
-                        style={{
-                          opacity: i === activeImage ? 1 : 0.5,
-                          boxShadow: i === activeImage ? `0 0 0 1.5px ${ROSE}` : 'none',
-                        }}
-                      >
-                        <Image src={img} alt="" fill className="object-cover" />
-                      </button>
-                    ))}
-                  </div>
-                )}
+            {/* Thumbnails — a thin underline marks the active one instead of a ring/shadow */}
+            {images.length > 1 && (
+              <div className="flex gap-3 mt-3">
+                {images.map((img, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setActiveImage(i)}
+                    className="relative w-12 h-[60px] overflow-hidden shrink-0 transition-opacity"
+                    style={{
+                      opacity: i === activeImage ? 1 : 0.45,
+                      borderRadius: '3px',
+                      boxShadow: i === activeImage ? `inset 0 -2px 0 ${PEACH}` : 'none',
+                    }}
+                  >
+                    <Image src={img} alt="" fill className="object-cover" />
+                  </button>
+                ))}
               </div>
+            )}
+
+            {/* Wishlist / share — a plain text row under the image, not floating
+                chrome on top of it */}
+            <div className="flex items-center gap-5 mt-4">
+              <button
+                onClick={() => { setWished((w) => !w); toast.success(wished ? 'Removed from wishlist' : 'Added to wishlist'); }}
+                className="flex items-center gap-1.5 text-xs font-medium"
+                style={{ color: wished ? PEACH : INK_SOFT }}
+              >
+                <Heart size={14} strokeWidth={1.5} fill={wished ? PEACH : 'none'} />
+                {wished ? 'Saved' : 'Save'}
+              </button>
+              <button onClick={handleShare} className="flex items-center gap-1.5 text-xs font-medium" style={{ color: INK_SOFT }}>
+                <Share2 size={14} strokeWidth={1.5} />
+                Share
+              </button>
             </div>
           </div>
 
           {/* ── Details ── */}
-          <div className="sm:col-span-5 flex flex-col">
+          <div className="flex flex-col">
+            {product.category?.name && (
+              <p className="text-[11px] font-medium uppercase tracking-[0.18em] mb-2" style={{ color: PEACH }}>
+                {product.category.name}
+              </p>
+            )}
+
             <h1
-              className={`${display.className} text-[28px] sm:text-4xl leading-[1.08]`}
+              className={`${display.className} text-[26px] sm:text-[32px] leading-[1.15]`}
               style={{ color: INK, fontWeight: 400, letterSpacing: '-0.01em' }}
             >
               {product.name}
             </h1>
 
-            <div className="flex items-center gap-2 mt-3">
-              <div className="flex items-center gap-0.5">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star
-                    key={i}
-                    size={13}
-                    strokeWidth={1.5}
-                    style={
-                      i < Math.round(product.rating)
-                        ? { fill: ROSE, color: ROSE }
-                        : { fill: 'none', color: BLUSH_LINE }
-                    }
-                  />
-                ))}
-              </div>
-              <span className="text-sm" style={{ color: INK_SOFT }}>({product.reviewCount} reviews)</span>
-            </div>
+            {/* <div className="flex items-center gap-1.5 mt-2.5 text-sm" style={{ color: INK_SOFT }}>
+              <Star size={13} strokeWidth={1.5} style={{ fill: PEACH, color: PEACH }} />
+              <span style={{ color: INK }}>{product.rating?.toFixed?.(1) ?? product.rating}</span>
+              <span>· {product.reviewCount} reviews</span>
+            </div> */}
 
-            <div className="mt-5">
-              <div className="flex items-end gap-3">
-                <span className={`${display.className} text-[30px]`} style={{ color: INK, fontWeight: 500 }}>
-                  {formatINR(activeVariant?.price)}
+            <div className="flex items-baseline gap-3 mt-6">
+              <span className={`${display.className} text-[26px]`} style={{ color: INK, fontWeight: 500 }}>
+                {formatINR(activeVariant?.price)}
+              </span>
+              {activeVariant?.compareAtPrice > activeVariant?.price && (
+                <span className="line-through text-sm" style={{ color: NEUTRAL }}>
+                  {formatINR(activeVariant.compareAtPrice)}
                 </span>
-                {activeVariant?.compareAtPrice > activeVariant?.price && (
-                  <span className="line-through text-lg mb-0.5" style={{ color: NEUTRAL }}>
-                    {formatINR(activeVariant.compareAtPrice)}
-                  </span>
-                )}
-              </div>
+              )}
               {discount > 0 && (
-                <div className="flex items-center gap-1.5 mt-1.5">
-                  <Tag size={12} style={{ color: ROSE }} />
-                  <p className="text-xs font-medium" style={{ color: ROSE }}>
-                    You save {formatINR(activeVariant.compareAtPrice - activeVariant.price)}
-                  </p>
-                </div>
+                <span className="text-xs font-medium" style={{ color: PEACH }}>
+                  {discount}% off
+                </span>
               )}
             </div>
 
-            {/* Meta — small definition-list rhythm instead of an inline sentence */}
             {product.fabric && (
-              <dl className="flex gap-2 mt-4 text-sm">
-                <dt style={{ color: INK_SOFT }}>Fabric</dt>
-                <dd className="font-medium" style={{ color: INK }}>{product.fabric}</dd>
-              </dl>
+              <p className="text-sm mt-3" style={{ color: INK_SOFT }}>
+                Fabric <span style={{ color: INK }}>— {product.fabric}</span>
+              </p>
             )}
 
-            <div className="mt-6">
+            <div className="mt-8 pt-8" style={{ borderTop: `1px solid ${LINE}` }}>
               <ColorSizeSelector
                 variants={product.variants}
                 activeVariant={activeVariant}
@@ -350,105 +289,97 @@ export default function ProductPage() {
               />
             </div>
 
-            <div className="flex items-center gap-3 mt-6">
-              <p className="text-sm font-medium" style={{ color: INK_SOFT }}>Qty</p>
-              <div className="flex items-center" style={{ border: `1px solid ${BLUSH_LINE}`, borderRadius: '6px' }}>
+            <div className="flex items-center gap-4 mt-6">
+              <p className="text-sm" style={{ color: INK_SOFT }}>Qty</p>
+              <div className="flex items-center gap-4">
                 <button
                   onClick={() => setQty((q) => Math.max(1, q - 1))}
-                  className="w-8 h-8 flex items-center justify-center text-base font-medium"
+                  className="text-base leading-none"
                   style={{ color: INK }}
                 >
                   −
                 </button>
-                <span className="w-7 text-center text-sm font-semibold" style={{ color: INK }}>{qty}</span>
+                <span className="text-sm font-medium w-4 text-center" style={{ color: INK }}>{qty}</span>
                 <button
                   onClick={() => setQty((q) => (selectedSizeStock > 0 ? Math.min(selectedSizeStock, q + 1) : q + 1))}
                   disabled={!!activeSize && qty >= selectedSizeStock}
-                  className="w-8 h-8 flex items-center justify-center text-base font-medium disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="text-base leading-none disabled:opacity-30 disabled:cursor-not-allowed"
                   style={{ color: INK }}
                 >
                   +
                 </button>
               </div>
               {!!activeSize && selectedSizeStock > 0 && selectedSizeStock <= 5 && (
-                <span className="text-xs font-semibold" style={{ color: ROSE }}>Only {selectedSizeStock} left</span>
+                <span className="text-xs" style={{ color: PEACH }}>Only {selectedSizeStock} left</span>
               )}
               {sizeOutOfStock && (
-                <span className="text-xs font-semibold" style={{ color: INK_SOFT }}>Out of stock</span>
+                <span className="text-xs" style={{ color: INK_SOFT }}>Out of stock</span>
               )}
             </div>
 
-            {/* CTAs — hidden on mobile in favor of the sticky bar below,
-                shown inline on desktop where there's no fixed footer */}
-            <div className="hidden sm:flex flex-col gap-2.5 mt-7">
+            {/* CTAs — hidden on mobile in favor of the sticky bar below */}
+            <div className="hidden sm:flex flex-col gap-2.5 mt-8">
               <button
                 onClick={handleBuyNow}
                 disabled={sizeOutOfStock}
-                className="w-full flex items-center justify-center gap-2 font-semibold py-3.5 rounded-md transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
-                style={{ background: ROSE, color: PAPER }}
+                className="w-full flex items-center justify-center gap-2 font-medium py-3.5 transition-opacity active:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{ background: PEACH, color: PAPER, borderRadius: '4px' }}
               >
-                <Zap size={17} fill={PAPER} /> {sizeOutOfStock ? 'Out of Stock' : 'Buy Now'}
+                <Zap size={16} fill={PAPER} /> {sizeOutOfStock ? 'Out of Stock' : 'Buy Now'}
               </button>
               <button
                 onClick={handleAddToCart}
                 disabled={sizeOutOfStock}
-                className="w-full flex items-center justify-center gap-2 font-medium py-3 rounded-md transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
-                style={{ border: `1px solid ${ROSE}`, color: ROSE, background: PAPER }}
+                className="w-full flex items-center justify-center gap-2 font-medium py-3.5 transition-opacity active:opacity-70 disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{ border: `1px solid ${INK}`, color: INK, background: PAPER, borderRadius: '4px' }}
               >
-                <ShoppingBag size={16} /> {sizeOutOfStock ? 'Out of Stock' : 'Add to Cart'}
+                <ShoppingBag size={15} /> {sizeOutOfStock ? 'Out of Stock' : 'Add to Cart'}
               </button>
             </div>
 
             {product.description && (
-              <div className="mt-7 text-sm leading-relaxed pt-6" style={{ color: INK_SOFT, borderTop: `1px solid ${BLUSH_LINE}` }}>
-                <h3 className={`${display.className} text-base mb-2`} style={{ color: INK, fontWeight: 500 }}>
+              <div className="mt-8 pt-8 text-sm leading-relaxed" style={{ color: INK_SOFT, borderTop: `1px solid ${LINE}` }}>
+                <h3 className="text-[11px] font-medium uppercase tracking-[0.18em] mb-3" style={{ color: INK }}>
                   Description
                 </h3>
                 <p>{product.description}</p>
               </div>
             )}
 
-            {/* Spacer so content never sits under the mobile sticky bar */}
             <div className="h-4 sm:h-0" />
           </div>
         </div>
 
         {/* Reviews */}
-        {reviews?.length > 0 && (
-          <div className="mt-16 sm:mt-24">
-            <h2 className={`${display.className} text-xl sm:text-2xl mb-6`} style={{ color: INK, fontWeight: 400 }}>
+        {/* {reviews?.length > 0 && (
+          <div className="mt-20 sm:mt-28">
+            <h2 className="text-[11px] font-medium uppercase tracking-[0.18em] mb-8" style={{ color: INK }}>
               Customer Reviews
             </h2>
-            <div className="grid sm:grid-cols-2 gap-x-10 gap-y-7">
+            <div className="grid sm:grid-cols-2 gap-x-12 gap-y-8">
               {reviews.map((r) => (
-                <div key={r._id} className="pt-5" style={{ borderTop: `1px solid ${BLUSH_LINE}` }}>
-                  <div className="flex items-center gap-0.5 mb-2">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star
-                        key={i}
-                        size={12}
-                        strokeWidth={1.5}
-                        style={i < r.rating ? { fill: ROSE, color: ROSE } : { fill: 'none', color: BLUSH_LINE }}
-                      />
-                    ))}
+                <div key={r._id} className="pt-5" style={{ borderTop: `1px solid ${LINE}` }}>
+                  <div className="flex items-center gap-1 mb-2 text-xs" style={{ color: INK_SOFT }}>
+                    <Star size={12} strokeWidth={1.5} style={{ fill: PEACH, color: PEACH }} />
+                    <span style={{ color: INK }}>{r.rating}</span>
                   </div>
                   <p className={`${display.className} text-sm leading-relaxed`} style={{ color: INK }}>
                     {r.comment}
                   </p>
-                  <p className="text-xs font-semibold mt-3" style={{ color: INK_SOFT }}>{r.customerName}</p>
+                  <p className="text-xs mt-3" style={{ color: INK_SOFT }}>{r.customerName}</p>
                 </div>
               ))}
             </div>
           </div>
-        )}
+        )} */}
 
         {/* Related */}
         {related?.length > 0 && (
-          <div className="mt-16 sm:mt-24">
-            <h2 className={`${display.className} text-xl sm:text-2xl mb-6`} style={{ color: INK, fontWeight: 400 }}>
+          <div className="mt-20 sm:mt-28">
+            <h2 className="text-[11px] font-medium uppercase tracking-[0.18em] mb-8" style={{ color: INK }}>
               You may also like
             </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-5 gap-y-8">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-10">
               {related.map((p) => <ProductCard key={p._id} product={p} />)}
             </div>
           </div>
@@ -456,16 +387,14 @@ export default function ProductPage() {
       </div>
 
       {/* Sticky mobile buy bar — portaled directly to <body> so no ancestor
-          (layout wrapper, motion/animation container, transform, overflow-hidden,
-          etc.) can break its fixed positioning. This is what makes it reliably
-          show up on mobile regardless of what wraps this page. */}
+          can break its fixed positioning. */}
       {mounted && data?.product && createPortal(
         <div
-          className="sm:hidden fixed bottom-0 left-0 right-0 flex items-center gap-3 px-4 py-3"
-          style={{ background: PAPER, borderTop: `1px solid ${BLUSH_LINE}`, zIndex: 9999 }}
+          className="sm:hidden fixed bottom-0 left-0 right-0 flex items-center gap-3 px-5 py-3"
+          style={{ background: PAPER, borderTop: `1px solid ${LINE}`, zIndex: 9999 }}
         >
           <div className="shrink-0">
-            <p className={`${display.className} text-lg leading-none`} style={{ color: INK, fontWeight: 500 }}>
+            <p className="text-base font-medium leading-none" style={{ color: INK }}>
               {formatINR(activeVariant?.price)}
             </p>
             {activeVariant?.compareAtPrice > activeVariant?.price && (
@@ -477,16 +406,16 @@ export default function ProductPage() {
           <button
             onClick={handleAddToCart}
             disabled={sizeOutOfStock}
-            className="flex-1 flex items-center justify-center gap-1.5 font-medium py-2.5 rounded-md text-sm disabled:opacity-50"
-            style={{ border: `1px solid ${ROSE}`, color: ROSE, background: PAPER }}
+            className="flex-1 flex items-center justify-center gap-1.5 font-medium py-2.5 text-sm disabled:opacity-40"
+            style={{ border: `1px solid ${INK}`, color: INK, background: PAPER, borderRadius: '4px' }}
           >
             <ShoppingBag size={15} /> Cart
           </button>
           <button
             onClick={handleBuyNow}
             disabled={sizeOutOfStock}
-            className="flex-1 flex items-center justify-center gap-1.5 font-semibold py-2.5 rounded-md text-sm disabled:opacity-50"
-            style={{ background: ROSE, color: PAPER }}
+            className="flex-1 flex items-center justify-center gap-1.5 font-medium py-2.5 text-sm disabled:opacity-40"
+            style={{ background: PEACH, color: PAPER, borderRadius: '4px' }}
           >
             <Zap size={15} fill={PAPER} /> {sizeOutOfStock ? 'Sold out' : 'Buy now'}
           </button>
