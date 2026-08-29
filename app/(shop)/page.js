@@ -133,7 +133,7 @@ export default async function HomePage() {
         )}
 
         <Link
-          href="/category/all"
+          href="/products"
           className="inline-block mt-10 px-8 py-3  text-[12px] font-bold tracking-[2px] uppercase transition-colors bg-[#F6DDC0] hover:bg-[#EFCB9E]"
           style={{ color: COFFEE, fontFamily: FONT_SANS }}
         >
