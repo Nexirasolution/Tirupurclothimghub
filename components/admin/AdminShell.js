@@ -8,10 +8,13 @@ import {
   Clapperboard, Star, Ticket, Layers, FileBarChart, Settings as SettingsIcon, Menu, X, LogOut
 } from 'lucide-react';
 
-// SSRK Brand Colors
-// Crimson : #8B0000
-// Gold    : #C9A84C
-// Cream   : #fdf5f5
+// Design tokens — same white/peach minimalist system as the rest of the site.
+const INK = '#241B21';
+const INK_SOFT = '#9C877D';
+const PEACH = '#D9946A';
+const PEACH_WASH = '#FBE8D9';
+const LINE = '#EEE3DA';
+const PAPER = '#FFFFFF';
 
 const NAV = [
   { href: '/admin',            label: 'Dashboard',     icon: LayoutDashboard },
@@ -19,12 +22,12 @@ const NAV = [
   { href: '/admin/categories', label: 'Categories',    icon: ListTree },
   { href: '/admin/orders',     label: 'Orders',        icon: ShoppingCart },
   { href: '/admin/inventory',  label: 'Inventory',     icon: Boxes },
-  { href: '/admin/combos',     label: 'Combo Offers',  icon: Layers },
+  // { href: '/admin/combos',     label: 'Combo Offers',  icon: Layers },
   { href: '/admin/banners',    label: 'Banners',       icon: ImageIcon },
-  { href: '/admin/reels',      label: 'Shop by Reels', icon: Clapperboard },
-  { href: '/admin/reviews',    label: 'Reviews',       icon: Star },
-  { href: '/admin/coupons',    label: 'Coupons',       icon: Ticket },
-  { href: '/admin/reports',    label: 'Sales Reports', icon: FileBarChart },
+  // { href: '/admin/reels',      label: 'Shop by Reels', icon: Clapperboard },
+  // { href: '/admin/reviews',    label: 'Reviews',       icon: Star },
+  // { href: '/admin/coupons',    label: 'Coupons',       icon: Ticket },
+  // { href: '/admin/reports',    label: 'Sales Reports', icon: FileBarChart },
   { href: '/admin/settings',   label: 'Settings',      icon: SettingsIcon },
 ];
 
@@ -39,12 +42,12 @@ export default function AdminShell({ admin, children }) {
   }
 
   return (
-    <div className="min-h-screen flex" style={{ background: '#fdf5f5' }}>
+    <div className="min-h-screen flex" style={{ background: PAPER }}>
       {/* Mobile overlay */}
       {open && (
         <div
           className="fixed inset-0 z-40 lg:hidden"
-          style={{ background: 'rgba(139,0,0,0.35)' }}
+          style={{ background: 'rgba(36,27,33,0.35)' }}
           onClick={() => setOpen(false)}
         />
       )}
@@ -55,25 +58,22 @@ export default function AdminShell({ admin, children }) {
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
         style={{
-          background: '#8B0000',
-          borderRight: '3px solid #C9A84C',
+          background: PAPER,
+          borderRight: `1px solid ${LINE}`,
         }}
       >
         {/* Sidebar header */}
         <div
           className="flex items-center justify-between px-5 py-4"
-          style={{ borderBottom: '1px solid rgba(201,168,76,0.35)' }}
+          style={{ borderBottom: `1px solid ${LINE}` }}
         >
           <div className="flex flex-col leading-tight">
-            <span
-              className="font-bold text-lg tracking-wide"
-              style={{ color: '#C9A84C', fontFamily: 'Georgia, serif' }}
-            >
-              Mohith Trends
+            <span className="font-medium text-base" style={{ color: INK }}>
+              Tirupur Clothing Hub
             </span>
             <span
-              className="text-[10px] tracking-widest uppercase"
-              style={{ color: 'rgba(255,255,255,0.6)', fontFamily: 'sans-serif' }}
+              className="text-[10px] tracking-widest uppercase mt-0.5"
+              style={{ color: INK_SOFT }}
             >
               Admin Panel
             </span>
@@ -81,17 +81,14 @@ export default function AdminShell({ admin, children }) {
           <button
             className="lg:hidden"
             onClick={() => setOpen(false)}
-            style={{ color: '#C9A84C' }}
+            style={{ color: INK_SOFT }}
           >
             <X size={20} />
           </button>
         </div>
 
-        {/* Gold ornament line */}
-        <div style={{ height: '2px', background: 'linear-gradient(90deg, transparent, #C9A84C, transparent)' }} />
-
         {/* Nav links */}
-        <nav className="p-3 space-y-0.5 overflow-y-auto h-[calc(100vh-72px)]">
+        <nav className="p-3 space-y-0.5 overflow-y-auto h-[calc(100vh-65px)]">
           {NAV.map(({ href, label, icon: Icon }) => {
             const active = pathname === href || (href !== '/admin' && pathname.startsWith(href));
             return (
@@ -99,30 +96,22 @@ export default function AdminShell({ admin, children }) {
                 key={href}
                 href={href}
                 onClick={() => setOpen(false)}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all"
-                style={
-                  active
-                    ? {
-                        background: '#C9A84C',
-                        color: '#8B0000',
-                        fontFamily: 'sans-serif',
-                        fontWeight: '700',
-                      }
-                    : {
-                        color: 'rgba(255,255,255,0.8)',
-                        fontFamily: 'sans-serif',
-                      }
-                }
+                className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors"
+                style={{
+                  borderRadius: '4px',
+                  background: active ? PEACH_WASH : 'transparent',
+                  color: active ? PEACH : INK_SOFT,
+                }}
                 onMouseEnter={(e) => {
                   if (!active) {
-                    e.currentTarget.style.background = 'rgba(201,168,76,0.15)';
-                    e.currentTarget.style.color = '#C9A84C';
+                    e.currentTarget.style.background = PEACH_WASH;
+                    e.currentTarget.style.color = INK;
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (!active) {
                     e.currentTarget.style.background = 'transparent';
-                    e.currentTarget.style.color = 'rgba(255,255,255,0.8)';
+                    e.currentTarget.style.color = INK_SOFT;
                   }
                 }}
               >
@@ -133,23 +122,20 @@ export default function AdminShell({ admin, children }) {
           })}
 
           {/* Divider */}
-          <div
-            className="my-3"
-            style={{ height: '1px', background: 'rgba(201,168,76,0.25)' }}
-          />
+          <div className="my-3" style={{ height: '1px', background: LINE }} />
 
           {/* Logout */}
           <button
             onClick={logout}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium w-full transition-all"
-            style={{ color: 'rgba(255,255,255,0.55)', fontFamily: 'sans-serif' }}
+            className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium w-full transition-colors"
+            style={{ borderRadius: '4px', color: INK_SOFT }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-              e.currentTarget.style.color = '#fff';
+              e.currentTarget.style.background = PEACH_WASH;
+              e.currentTarget.style.color = INK;
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = 'rgba(255,255,255,0.55)';
+              e.currentTarget.style.color = INK_SOFT;
             }}
           >
             <LogOut size={17} /> Logout
@@ -163,18 +149,15 @@ export default function AdminShell({ admin, children }) {
         <header
           className="lg:hidden sticky top-0 z-30 flex items-center gap-3 px-4 py-3"
           style={{
-            background: '#8B0000',
-            borderBottom: '2px solid #C9A84C',
+            background: PAPER,
+            borderBottom: `1px solid ${LINE}`,
           }}
         >
-          <button onClick={() => setOpen(true)} style={{ color: '#C9A84C' }}>
+          <button onClick={() => setOpen(true)} style={{ color: INK }}>
             <Menu size={22} />
           </button>
-          <span
-            className="font-bold text-lg tracking-wide"
-            style={{ color: '#C9A84C', fontFamily: 'Georgia, serif' }}
-          >
-            Mohith Trends Admin
+          <span className="font-medium text-base" style={{ color: INK }}>
+            Tirupur Clothing Hub Admin
           </span>
         </header>
 

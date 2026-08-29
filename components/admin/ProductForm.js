@@ -5,49 +5,55 @@ import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { Plus, Trash2, Upload, Loader2, X } from 'lucide-react';
 
-// SSRK Brand Colors
-// Crimson : #8B0000
-// Gold    : #C9A84C
-// Cream   : #fdf5f5
+// Design tokens — same white/peach minimalist system as the rest of the site.
+const INK = '#241B21';
+const INK_SOFT = '#9C877D';
+const PEACH = '#D9946A';
+const PEACH_WASH = '#FBE8D9';
+const LINE = '#EEE3DA';
+const PAPER = '#FFFFFF';
+const DISABLED_BG = '#F7F2EC';
 
 function emptyVariant() {
-  return { color: '', colorHex: '#8B0000', images: [''], price: '', compareAtPrice: '', sizes: [{ size: '', stock: 0, sku: '' }] };
+  return { color: '', colorHex: '#D9946A', images: [''], price: '', compareAtPrice: '', sizes: [{ size: '', stock: 0, sku: '' }] };
 }
 
 // Shared input style
 const inputStyle = {
-  border: '1.5px solid #e8d5d5',
-  borderRadius: '8px',
+  border: `1px solid ${LINE}`,
+  borderRadius: '4px',
   padding: '8px 12px',
   fontSize: '14px',
   fontFamily: 'sans-serif',
-  color: '#1a1a1a',
-  background: '#fff',
+  color: INK,
+  background: PAPER,
   width: '100%',
   outline: 'none',
   marginTop: '4px',
 };
 
 const labelStyle = {
-  fontSize: '13px',
-  fontWeight: '600',
-  color: '#8B0000',
+  fontSize: '12px',
+  fontWeight: '500',
+  color: INK_SOFT,
   fontFamily: 'sans-serif',
 };
 
 const cardStyle = {
-  background: '#fff',
-  border: '1.5px solid #e8d5d5',
-  borderRadius: '12px',
+  background: PAPER,
+  border: `1px solid ${LINE}`,
+  borderRadius: '6px',
   padding: '20px',
   marginBottom: '16px',
 };
 
 const sectionHeadStyle = {
-  fontSize: '15px',
-  fontWeight: '700',
-  color: '#8B0000',
-  fontFamily: 'Georgia, serif',
+  fontSize: '11px',
+  fontWeight: '500',
+  color: INK,
+  textTransform: 'uppercase',
+  letterSpacing: '0.14em',
+  fontFamily: 'sans-serif',
   marginBottom: '12px',
 };
 
@@ -82,9 +88,9 @@ function ImageSlot({ value, onChange, onRemove, showRemove }) {
         style={{
           width: '48px',
           height: '48px',
-          borderRadius: '8px',
-          border: '2px dashed #C9A84C',
-          background: '#fdf5f5',
+          borderRadius: '4px',
+          border: `1.5px dashed ${PEACH}`,
+          background: PEACH_WASH,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -94,13 +100,13 @@ function ImageSlot({ value, onChange, onRemove, showRemove }) {
         {value ? (
           <img src={value} alt="" className="w-full h-full object-cover" />
         ) : uploading ? (
-          <Loader2 size={16} className="animate-spin" style={{ color: '#8B0000' }} />
+          <Loader2 size={16} className="animate-spin" style={{ color: INK }} />
         ) : (
-          <Upload size={14} style={{ color: '#C9A84C' }} />
+          <Upload size={14} style={{ color: PEACH }} />
         )}
         {uploading && value && (
           <div className="absolute inset-0 flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.7)' }}>
-            <Loader2 size={14} className="animate-spin" style={{ color: '#8B0000' }} />
+            <Loader2 size={14} className="animate-spin" style={{ color: INK }} />
           </div>
         )}
       </div>
@@ -111,12 +117,12 @@ function ImageSlot({ value, onChange, onRemove, showRemove }) {
         style={{ ...inputStyle, marginTop: 0, flex: 1 }}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        onFocus={(e) => (e.target.style.borderColor = '#C9A84C')}
-        onBlur={(e) => (e.target.style.borderColor = '#e8d5d5')}
+        onFocus={(e) => (e.target.style.borderColor = PEACH)}
+        onBlur={(e) => (e.target.style.borderColor = LINE)}
       />
 
       {showRemove && (
-        <button type="button" onClick={onRemove} style={{ color: '#C9A84C', flexShrink: 0 }}>
+        <button type="button" onClick={onRemove} style={{ color: INK_SOFT, flexShrink: 0 }}>
           <X size={15} />
         </button>
       )}
@@ -238,7 +244,7 @@ export default function ProductForm({ initial, productId }) {
       {/* Basic Info Card */}
       <div style={cardStyle}>
         <p style={sectionHeadStyle}>Product Details</p>
-        <div style={{ height: '1px', background: '#C9A84C', opacity: 0.4, marginBottom: '16px' }} />
+        <div style={{ height: '1px', background: LINE, marginBottom: '16px' }} />
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <label style={labelStyle}>Product Name *</label>
@@ -247,8 +253,8 @@ export default function ProductForm({ initial, productId }) {
               style={inputStyle}
               value={form.name}
               onChange={(e) => update('name', e.target.value)}
-              onFocus={(e) => (e.target.style.borderColor = '#C9A84C')}
-              onBlur={(e) => (e.target.style.borderColor = '#e8d5d5')}
+              onFocus={(e) => (e.target.style.borderColor = PEACH)}
+              onBlur={(e) => (e.target.style.borderColor = LINE)}
             />
           </div>
           <div>
@@ -256,7 +262,7 @@ export default function ProductForm({ initial, productId }) {
             <input
               disabled
               readOnly
-              style={{ ...inputStyle, background: '#f5f0f0', color: '#8a8a8a', cursor: 'not-allowed' }}
+              style={{ ...inputStyle, background: DISABLED_BG, color: INK_SOFT, cursor: 'not-allowed' }}
               value={form.sku || 'Auto-generated from category on save'}
               title="SKU is generated automatically from the product's category"
             />
@@ -268,8 +274,8 @@ export default function ProductForm({ initial, productId }) {
               style={inputStyle}
               value={form.category?._id || form.category}
               onChange={(e) => update('category', e.target.value)}
-              onFocus={(e) => (e.target.style.borderColor = '#C9A84C')}
-              onBlur={(e) => (e.target.style.borderColor = '#e8d5d5')}
+              onFocus={(e) => (e.target.style.borderColor = PEACH)}
+              onBlur={(e) => (e.target.style.borderColor = LINE)}
             >
               <option value="">Select category</option>
               {categories.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
@@ -281,8 +287,8 @@ export default function ProductForm({ initial, productId }) {
               style={inputStyle}
               value={form.fabric}
               onChange={(e) => update('fabric', e.target.value)}
-              onFocus={(e) => (e.target.style.borderColor = '#C9A84C')}
-              onBlur={(e) => (e.target.style.borderColor = '#e8d5d5')}
+              onFocus={(e) => (e.target.style.borderColor = PEACH)}
+              onBlur={(e) => (e.target.style.borderColor = LINE)}
             />
           </div>
           <div>
@@ -291,8 +297,8 @@ export default function ProductForm({ initial, productId }) {
               style={inputStyle}
               value={Array.isArray(form.tags) ? form.tags.join(', ') : ''}
               onChange={(e) => update('tags', e.target.value.split(',').map((t) => t.trim()).filter(Boolean))}
-              onFocus={(e) => (e.target.style.borderColor = '#C9A84C')}
-              onBlur={(e) => (e.target.style.borderColor = '#e8d5d5')}
+              onFocus={(e) => (e.target.style.borderColor = PEACH)}
+              onBlur={(e) => (e.target.style.borderColor = LINE)}
             />
           </div>
           <div className="sm:col-span-2">
@@ -302,8 +308,8 @@ export default function ProductForm({ initial, productId }) {
               rows={3}
               value={form.description}
               onChange={(e) => update('description', e.target.value)}
-              onFocus={(e) => (e.target.style.borderColor = '#C9A84C')}
-              onBlur={(e) => (e.target.style.borderColor = '#e8d5d5')}
+              onFocus={(e) => (e.target.style.borderColor = PEACH)}
+              onBlur={(e) => (e.target.style.borderColor = LINE)}
             />
           </div>
 
@@ -319,13 +325,13 @@ export default function ProductForm({ initial, productId }) {
               <label
                 key={key}
                 className="flex items-center gap-2 text-sm cursor-pointer"
-                style={{ color: '#5a2020', fontFamily: 'sans-serif' }}
+                style={{ color: INK_SOFT, fontFamily: 'sans-serif' }}
               >
                 <input
                   type="checkbox"
                   checked={!!form[key]}
                   onChange={(e) => update(key, e.target.checked)}
-                  style={{ accentColor: '#8B0000', width: '15px', height: '15px' }}
+                  style={{ accentColor: PEACH, width: '15px', height: '15px' }}
                 />
                 {label}
               </label>
@@ -341,22 +347,22 @@ export default function ProductForm({ initial, productId }) {
           <button
             type="button"
             onClick={addVariant}
-            className="flex items-center gap-1 text-sm font-semibold px-4 py-2 transition-all"
+            className="flex items-center gap-1 text-sm font-medium px-4 py-2 transition-colors"
             style={{
-              background: '#fff',
-              color: '#8B0000',
-              border: '1.5px solid #8B0000',
-              borderRadius: '8px',
+              background: PAPER,
+              color: PEACH,
+              border: `1px solid ${PEACH}`,
+              borderRadius: '4px',
               fontFamily: 'sans-serif',
               cursor: 'pointer',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#8B0000';
-              e.currentTarget.style.color = '#fff';
+              e.currentTarget.style.background = PEACH;
+              e.currentTarget.style.color = PAPER;
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = '#fff';
-              e.currentTarget.style.color = '#8B0000';
+              e.currentTarget.style.background = PAPER;
+              e.currentTarget.style.color = PEACH;
             }}
           >
             <Plus size={16} /> Add Variant
@@ -368,16 +374,16 @@ export default function ProductForm({ initial, productId }) {
             {/* Variant header */}
             <div
               className="flex justify-between items-center mb-3 pb-2"
-              style={{ borderBottom: '1px solid #C9A84C', opacity: 1 }}
+              style={{ borderBottom: `1px solid ${LINE}` }}
             >
-              <span style={{ fontWeight: '700', fontSize: '13px', color: '#8B0000', fontFamily: 'Georgia, serif' }}>
+              <span style={{ fontWeight: '500', fontSize: '13px', color: INK, fontFamily: 'sans-serif' }}>
                 Variant {vIdx + 1}
               </span>
               {form.variants.length > 1 && (
                 <button
                   type="button"
                   onClick={() => removeVariant(vIdx)}
-                  style={{ color: '#8B0000', cursor: 'pointer' }}
+                  style={{ color: INK_SOFT, cursor: 'pointer' }}
                 >
                   <Trash2 size={16} />
                 </button>
@@ -390,8 +396,8 @@ export default function ProductForm({ initial, productId }) {
                 style={inputStyle}
                 value={v.color}
                 onChange={(e) => updateVariant(vIdx, 'color', e.target.value)}
-                onFocus={(e) => (e.target.style.borderColor = '#C9A84C')}
-                onBlur={(e) => (e.target.style.borderColor = '#e8d5d5')}
+                onFocus={(e) => (e.target.style.borderColor = PEACH)}
+                onBlur={(e) => (e.target.style.borderColor = LINE)}
               />
               <input
                 type="color"
@@ -405,8 +411,8 @@ export default function ProductForm({ initial, productId }) {
                 style={inputStyle}
                 value={v.price}
                 onChange={(e) => updateVariant(vIdx, 'price', e.target.value)}
-                onFocus={(e) => (e.target.style.borderColor = '#C9A84C')}
-                onBlur={(e) => (e.target.style.borderColor = '#e8d5d5')}
+                onFocus={(e) => (e.target.style.borderColor = PEACH)}
+                onBlur={(e) => (e.target.style.borderColor = LINE)}
               />
               <input
                 placeholder="Compare-at price ₹"
@@ -414,12 +420,12 @@ export default function ProductForm({ initial, productId }) {
                 style={inputStyle}
                 value={v.compareAtPrice}
                 onChange={(e) => updateVariant(vIdx, 'compareAtPrice', e.target.value)}
-                onFocus={(e) => (e.target.style.borderColor = '#C9A84C')}
-                onBlur={(e) => (e.target.style.borderColor = '#e8d5d5')}
+                onFocus={(e) => (e.target.style.borderColor = PEACH)}
+                onBlur={(e) => (e.target.style.borderColor = LINE)}
               />
             </div>
 
-            <p style={{ fontSize: '12px', color: '#C9A84C', fontFamily: 'sans-serif', marginBottom: '8px', fontWeight: '600' }}>
+            <p style={{ fontSize: '12px', color: INK_SOFT, fontFamily: 'sans-serif', marginBottom: '8px', fontWeight: '500' }}>
               Images for this colour — click thumbnail to upload
             </p>
             {v.images.map((img, imgIdx) => (
@@ -434,12 +440,12 @@ export default function ProductForm({ initial, productId }) {
             <button
               type="button"
               onClick={() => addVariantImage(vIdx)}
-              style={{ fontSize: '12px', color: '#8B0000', fontFamily: 'sans-serif', fontWeight: '600', marginBottom: '12px', cursor: 'pointer' }}
+              style={{ fontSize: '12px', color: PEACH, fontFamily: 'sans-serif', fontWeight: '500', marginBottom: '12px', cursor: 'pointer' }}
             >
               + Add another image
             </button>
 
-            <p style={{ fontSize: '12px', color: '#C9A84C', fontFamily: 'sans-serif', fontWeight: '600', marginBottom: '6px' }}>
+            <p style={{ fontSize: '12px', color: INK_SOFT, fontFamily: 'sans-serif', fontWeight: '500', marginBottom: '6px' }}>
               Sizes &amp; Stock
             </p>
             {v.sizes.map((s, sIdx) => (
@@ -449,8 +455,8 @@ export default function ProductForm({ initial, productId }) {
                   style={{ ...inputStyle, width: '140px', marginTop: 0 }}
                   value={s.size}
                   onChange={(e) => updateSize(vIdx, sIdx, 'size', e.target.value)}
-                  onFocus={(e) => (e.target.style.borderColor = '#C9A84C')}
-                  onBlur={(e) => (e.target.style.borderColor = '#e8d5d5')}
+                  onFocus={(e) => (e.target.style.borderColor = PEACH)}
+                  onBlur={(e) => (e.target.style.borderColor = LINE)}
                 />
                 <input
                   type="number"
@@ -458,21 +464,21 @@ export default function ProductForm({ initial, productId }) {
                   style={{ ...inputStyle, width: '90px', marginTop: 0 }}
                   value={s.stock}
                   onChange={(e) => updateSize(vIdx, sIdx, 'stock', e.target.value)}
-                  onFocus={(e) => (e.target.style.borderColor = '#C9A84C')}
-                  onBlur={(e) => (e.target.style.borderColor = '#e8d5d5')}
+                  onFocus={(e) => (e.target.style.borderColor = PEACH)}
+                  onBlur={(e) => (e.target.style.borderColor = LINE)}
                 />
                 <input
                   placeholder="SKU (optional)"
                   style={{ ...inputStyle, flex: 1, marginTop: 0 }}
                   value={s.sku}
                   onChange={(e) => updateSize(vIdx, sIdx, 'sku', e.target.value)}
-                  onFocus={(e) => (e.target.style.borderColor = '#C9A84C')}
-                  onBlur={(e) => (e.target.style.borderColor = '#e8d5d5')}
+                  onFocus={(e) => (e.target.style.borderColor = PEACH)}
+                  onBlur={(e) => (e.target.style.borderColor = LINE)}
                 />
                 <button
                   type="button"
                   onClick={() => removeSize(vIdx, sIdx)}
-                  style={{ color: '#8B0000', cursor: 'pointer', flexShrink: 0 }}
+                  style={{ color: INK_SOFT, cursor: 'pointer', flexShrink: 0 }}
                 >
                   <Trash2 size={14} />
                 </button>
@@ -481,7 +487,7 @@ export default function ProductForm({ initial, productId }) {
             <button
               type="button"
               onClick={() => addSize(vIdx)}
-              style={{ fontSize: '12px', color: '#8B0000', fontFamily: 'sans-serif', fontWeight: '600', cursor: 'pointer' }}
+              style={{ fontSize: '12px', color: PEACH, fontFamily: 'sans-serif', fontWeight: '500', cursor: 'pointer' }}
             >
               + Add size
             </button>
@@ -492,22 +498,17 @@ export default function ProductForm({ initial, productId }) {
       {/* Submit button */}
       <button
         disabled={saving}
-        className="w-full sm:w-auto px-8 py-3 font-bold text-sm transition-all"
+        className="w-full sm:w-auto px-8 py-3 font-medium text-sm transition-opacity"
         style={{
-          background: saving ? '#b05050' : '#8B0000',
-          color: '#fff',
-          border: '2px solid #C9A84C',
-          borderRadius: '8px',
-          fontFamily: 'Georgia, serif',
+          background: PEACH,
+          color: PAPER,
+          border: 'none',
+          borderRadius: '4px',
+          fontFamily: 'sans-serif',
           fontSize: '14px',
-          letterSpacing: '0.5px',
+          letterSpacing: '0.02em',
           cursor: saving ? 'not-allowed' : 'pointer',
-        }}
-        onMouseEnter={(e) => {
-          if (!saving) e.currentTarget.style.background = '#6e0000';
-        }}
-        onMouseLeave={(e) => {
-          if (!saving) e.currentTarget.style.background = '#8B0000';
+          opacity: saving ? 0.6 : 1,
         }}
       >
         {saving ? 'Saving...' : productId ? 'Update Product' : 'Create Product'}

@@ -6,12 +6,12 @@
   --font-display: 'Poppins', sans-serif;
   --font-body: 'Poppins', sans-serif;
 
-  /* Brand Colors — white + pink minimalist */
-  --brand-pink: #DB2777;
-  --brand-pink-dark: #BE185D;
-  --brand-pink-light: #FDF2F8;
-  --brand-border: #FCE7F3;
-  --brand-ink: #171717;
+  /* Brand Colors — white + peach minimalist */
+  --brand-peach: #D9946A;
+  --brand-peach-dark: #C17F55;
+  --brand-peach-light: #FBE8D9;
+  --brand-border: #EEE3DA;
+  --brand-ink: #241B21;
 }
 
 html {
@@ -27,7 +27,7 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Scrollbar — pink thumb on white track */
+/* Scrollbar — peach thumb on white track */
 ::-webkit-scrollbar {
   height: 6px;
   width: 6px;
@@ -36,22 +36,22 @@ body {
   background: #fafafa;
 }
 ::-webkit-scrollbar-thumb {
-  background: #DB277799;
+  background: #D9946A99;
   border-radius: 10px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #DB2777;
+  background: var(--brand-peach);
 }
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* Primary button — solid pink, pill-shaped */
+/* Primary button — solid peach, flat minimalist radius */
 .btn-primary {
-  background: var(--brand-pink);
+  background: var(--brand-peach);
   color: #fff;
   font-weight: 500;
-  border-radius: 9999px;
+  border-radius: 4px;
   padding: 0.7rem 1.6rem;
   border: none;
   font-family: var(--font-body);
@@ -59,19 +59,38 @@ body {
   cursor: pointer;
 }
 .btn-primary:hover {
-  background: var(--brand-pink-dark);
+  background: var(--brand-peach-dark);
 }
 .btn-primary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-/* Outline button — pink border, flips on hover */
-.btn-outline {
-  border: 1.5px solid var(--brand-pink);
-  color: var(--brand-pink);
+/* Secondary button — same shape as primary, kept as an alias so
+   existing btn-secondary references (bulk-add, etc.) still resolve */
+.btn-secondary {
+  background: #fff;
+  color: var(--brand-ink);
   font-weight: 500;
-  border-radius: 9999px;
+  border-radius: 4px;
+  padding: 0.7rem 1.6rem;
+  border: 1px solid var(--brand-border);
+  font-family: var(--font-body);
+  transition: background 0.15s ease, border-color 0.15s ease;
+  cursor: pointer;
+}
+.btn-secondary:hover {
+  background: var(--brand-peach-light);
+  border-color: var(--brand-peach);
+}
+
+/* Outline button — ink border, flips to solid ink on hover so it reads
+   as a clear secondary action without competing with the peach accent */
+.btn-outline {
+  border: 1px solid var(--brand-ink);
+  color: var(--brand-ink);
+  font-weight: 500;
+  border-radius: 4px;
   padding: 0.65rem 1.5rem;
   background: #fff;
   font-family: var(--font-body);
@@ -79,16 +98,16 @@ body {
   cursor: pointer;
 }
 .btn-outline:hover {
-  background: var(--brand-pink);
+  background: var(--brand-ink);
   color: #fff;
 }
 
-/* Soft secondary button (blush fill) */
+/* Soft secondary button (peach-wash fill) */
 .btn-gold {
-  background: var(--brand-pink-light);
-  color: var(--brand-pink-dark);
+  background: var(--brand-peach-light);
+  color: var(--brand-peach-dark);
   font-weight: 600;
-  border-radius: 9999px;
+  border-radius: 4px;
   padding: 0.7rem 1.6rem;
   border: 1px solid var(--brand-border);
   font-family: var(--font-body);
@@ -110,7 +129,7 @@ body {
 /* Card */
 .card-soft {
   background: #fff;
-  border-radius: 12px;
+  border-radius: 6px;
   border: 1px solid #f0f0f0;
   box-shadow: none;
   transition: border-color 0.15s ease;

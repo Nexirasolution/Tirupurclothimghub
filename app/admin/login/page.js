@@ -4,6 +4,13 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 
+// Design tokens — same white/peach minimalist system as the rest of the site.
+const INK = '#241B21';
+const INK_SOFT = '#9C877D';
+const PEACH = '#D9946A';
+const LINE = '#EEE3DA';
+const PAPER = '#FFFFFF';
+
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -29,28 +36,46 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-brand-cream px-4">
-      <form onSubmit={submit} className="card-soft p-8 w-full max-w-sm">
-        <h1 className="font-display text-2xl font-bold text-brand-magenta text-center mb-1">Mohith Trends Admin</h1>
-        <p className="text-center text-sm text-brand-ink/50 mb-6">Mohith Trends</p>
-        <input
-          type="email"
-          required
-          placeholder="Admin email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full border rounded-lg px-3 py-2.5 text-sm mb-3"
-        />
-        <input
-          type="password"
-          required
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full border rounded-lg px-3 py-2.5 text-sm mb-4"
-        />
-        <button disabled={loading} className="btn-primary w-full">
-          {loading ? 'Signing in...' : 'Sign In'}
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: PAPER }}>
+      <form onSubmit={submit} className="w-full max-w-[340px]">
+        <div className="text-center mb-8">
+          <h1 className="text-xl font-medium" style={{ color: INK }}>
+            Tirupur Clothing Hub
+          </h1>
+          <p className="text-xs mt-1.5" style={{ color: INK_SOFT }}>Admin sign in</p>
+        </div>
+
+        <div className="space-y-3">
+          <input
+            type="email"
+            required
+            placeholder="Admin email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full px-3 py-2.5 text-sm bg-transparent outline-none transition-colors"
+            style={{ border: `1px solid ${LINE}`, borderRadius: '4px', color: INK }}
+            onFocus={(e) => (e.target.style.borderColor = PEACH)}
+            onBlur={(e) => (e.target.style.borderColor = LINE)}
+          />
+          <input
+            type="password"
+            required
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full px-3 py-2.5 text-sm bg-transparent outline-none transition-colors"
+            style={{ border: `1px solid ${LINE}`, borderRadius: '4px', color: INK }}
+            onFocus={(e) => (e.target.style.borderColor = PEACH)}
+            onBlur={(e) => (e.target.style.borderColor = LINE)}
+          />
+        </div>
+
+        <button
+          disabled={loading}
+          className="w-full mt-5 py-2.5 text-sm font-medium transition-opacity active:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{ background: PEACH, color: PAPER, borderRadius: '4px' }}
+        >
+          {loading ? 'Signing in…' : 'Sign In'}
         </button>
       </form>
     </div>
