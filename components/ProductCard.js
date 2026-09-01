@@ -6,7 +6,6 @@ import { MoreVertical } from 'lucide-react';
 import { formatINR } from '@/lib/utils';
 import { getVariantTotalStock } from '@/lib/stock';
 
-// Design tokens — matched to the site's coffee / light-peach / white theme
 const COFFEE = '#3E2B22';
 const COFFEE_FAINT = '#7A6A5E';
 const LIGHT_PEACH = '#F6DDC0';
@@ -28,7 +27,6 @@ export default function ProductCard({ product }) {
   return (
     <div style={{ background: PAPER, fontFamily: FONT_SANS }}>
       <Link href={`/product/${product.slug}`} className="block">
-        {/* Large image tile — sharp corners, no hover motion */}
         <div className="relative aspect-[3/4] overflow-hidden" style={{ background: PEACH_PALE }}>
           <Image
             src={image}
@@ -38,7 +36,6 @@ export default function ProductCard({ product }) {
             className={`object-cover ${outOfStock ? 'grayscale opacity-70' : ''}`}
           />
 
-          {/* Single pill badge, top-left — priority: out of stock > low stock > discount */}
           <div className="absolute top-4 left-4">
             {outOfStock ? (
               <span
@@ -64,7 +61,6 @@ export default function ProductCard({ product }) {
             ) : null}
           </div>
 
-          {/* Quiet three-dot marker, bottom-right */}
           <span
             className="absolute bottom-3.5 right-3.5 flex items-center justify-center w-8 h-8"
             style={{ color: PAPER, filter: 'drop-shadow(0 1px 2px rgba(62,43,34,0.45))' }}
@@ -73,12 +69,8 @@ export default function ProductCard({ product }) {
           </span>
         </div>
 
-        {/* Price only — no title, no rating, no buttons */}
         <div className="pt-4 flex items-baseline gap-3 flex-wrap">
-          <span
-            className="font-bold text-lg sm:text-xl"
-            style={{ color: COFFEE }}
-          >
+          <span className="font-bold text-lg sm:text-xl" style={{ color: COFFEE }}>
             {formatINR(price)}
           </span>
           {compareAt > price && (

@@ -1,16 +1,29 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import ProductCard from '@/components/ProductCard';
 import Filters from '@/components/Filters';
 
 export default function CategoryPage() {
   const { slug } = useParams();
+  const searchParams = useSearchParams();
+
+  // flag ('bestseller' | 'topseller' | 'newarrival' | null) comes from the
+  // Shop dropdown link and stays active while the user re-sorts within that view.
+  const flag = searchParams.get('flag');
+
   const [category, setCategory] = useState(null);
   const [products, setProducts] = useState([]);
-  const [sort, setSort] = useState('newest');
+  const [sort, setSort] = useState(searchParams.get('sort') || 'newest');
   const [loading, setLoading] = useState(true);
+
+  // If the user clicks a different Shop link while already on a category
+  // page (slug or flag changes), re-sync local sort from the new URL.
+  useEffect(() => {
+    setSort(searchParams.get('sort') || 'newest');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug, flag]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -23,16 +36,24 @@ export default function CategoryPage() {
       sort,
       limit: '1000', // effectively "all" — no pagination
     });
+    if (flag) params.set('flag', flag);
+
     const res = await fetch(`/api/products?${params.toString()}`);
     const data = await res.json();
     setProducts(data.products || []);
 
     setLoading(false);
-  }, [slug, sort]);
+  }, [slug, sort, flag]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  const heading =
+    flag === 'bestseller' ? `Best Sellers${category?.name ? ` in ${category.name}` : ''}` :
+    flag === 'topseller' ? `Top Sellers${category?.name ? ` in ${category.name}` : ''}` :
+    flag === 'newarrival' ? `New Arrivals${category?.name ? ` in ${category.name}` : ''}` :
+    category?.name || 'Products';
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
@@ -40,7 +61,7 @@ export default function CategoryPage() {
       {/* Page heading */}
       <div className="mb-6">
         <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-neutral-900">
-          {category?.name || 'Products'}
+          {heading}
         </h1>
 
         {category?.description && (

@@ -8,7 +8,7 @@ import slugify from 'slugify';
 import { requireAdmin } from '@/lib/apiAuth';
 import { generateSku } from '@/lib/sku';
 
-// GET /api/products?category=slug&size=M&minPrice=0&maxPrice=2000&sort=newest&page=1&limit=20&tag=bestseller
+// GET /api/products?category=slug&size=M&minPrice=0&maxPrice=2000&sort=newest&page=1&limit=20&flag=bestseller
 // Pass limit=all to skip pagination entirely and return every matching product.
 export async function GET(req) {
   try {
@@ -34,11 +34,38 @@ export async function GET(req) {
       if (maxPrice) query.basePrice.$lte = Number(maxPrice);
     }
 
-    const flag = searchParams.get('flag'); // bestseller | topseller | active | featured
+    const flag = searchParams.get('flag'); // bestseller | topseller | active | featured | newarrival
     if (flag === 'bestseller') query.isBestSeller = true;
     if (flag === 'topseller') query.isTopSeller = true;
     if (flag === 'active') query.isActiveSeller = true;
     if (flag === 'featured') query.isFeatured = true;
+
+    // "New Arrivals" hybrid fallback:
+    // 1. Try last 30 days within the current query scope (category/size/price already applied).
+    // 2. If nothing, widen to 90 days.
+    // 3. If still nothing, drop the date filter entirely — customer sees the
+    //    most recently added items regardless of age, sorted newest-first,
+    //    instead of an empty page.
+    if (flag === 'newarrival') {
+      const cutoff30 = new Date();
+      cutoff30.setDate(cutoff30.getDate() - 30);
+
+      const cutoff90 = new Date();
+      cutoff90.setDate(cutoff90.getDate() - 90);
+
+      const [count30, count90] = await Promise.all([
+        Product.countDocuments({ ...query, createdAt: { $gte: cutoff30 } }),
+        Product.countDocuments({ ...query, createdAt: { $gte: cutoff90 } }),
+      ]);
+
+      if (count30 > 0) {
+        query.createdAt = { $gte: cutoff30 };
+      } else if (count90 > 0) {
+        query.createdAt = { $gte: cutoff90 };
+      }
+      // else: no date filter added — falls through to sort: newest below,
+      // returning the N most recent products in scope regardless of age.
+    }
 
     const sort = searchParams.get('sort') || 'newest';
     const sortMap = {
