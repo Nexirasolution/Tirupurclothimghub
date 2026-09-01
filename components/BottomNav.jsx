@@ -6,13 +6,13 @@ import { Home, ClipboardList, Heart, ShoppingBag } from 'lucide-react';
 import { useCart } from '@/components/CartContext';
 import { useWishlist } from '@/components/WhishlistContext';
 
-// Design tokens — same peach + coffee system as the Footer: a deeper, duskier
-// peach field, white for the default/active label and icon color, and a
-// light-coffee/latte accent reserved for the active indicator and badges.
-const PEACH = '#D9946A';        // background — deeper, duskier peach
-const COFFEE_LIGHT = '#E4C4A1'; // accent — active underline, badge
-const WHITE = '#FFFFFF';        // icon + label color
-const LINE = 'rgba(255,255,255,0.22)';       // hairline top border
+// Design tokens — peach + coffee system: a light peach/cream field, a deep
+// coffee tone for the default/active label and icon color, and a warm
+// coffee accent reserved for the active indicator and badges.
+const PEACH = '#F4E8E3';        // background — light peach/cream
+const COFFEE_LIGHT = '#D9946A'; // accent — active underline, badge
+const COFFEE_DARK = '#4A3226';  // icon + label color (dark, for contrast on light bg)
+const LINE = 'rgba(74,50,38,0.12)';       // hairline top border
 
 const NAV_ITEMS = [
   { href: '/', label: 'Home', icon: Home },
@@ -69,13 +69,13 @@ export default function BottomNav() {
                   <Icon
                     size={20}
                     strokeWidth={active ? 2 : 1.5}
-                    style={{ color: WHITE, opacity: active ? 1 : 0.65 }}
-                    fill={active && label === 'Wishlist' ? WHITE : 'none'}
+                    style={{ color: COFFEE_DARK, opacity: active ? 1 : 0.55 }}
+                    fill={active && label === 'Wishlist' ? COFFEE_DARK : 'none'}
                   />
                   {badge > 0 && (
                     <span
                       className="absolute -top-1.5 -right-2 text-[8px] font-semibold leading-none rounded-full min-w-[13px] h-[13px] flex items-center justify-center px-[3px]"
-                      style={{ background: COFFEE_LIGHT, color: '#4A3226', border: `1px solid ${PEACH}` }}
+                      style={{ background: COFFEE_LIGHT, color: '#FFFFFF', border: `1px solid ${PEACH}` }}
                     >
                       {badge > 9 ? '9+' : badge}
                     </span>
@@ -84,7 +84,7 @@ export default function BottomNav() {
 
                 <span
                   className="text-[9px] font-medium tracking-wide"
-                  style={{ color: WHITE, opacity: active ? 1 : 0.65 }}
+                  style={{ color: COFFEE_DARK, opacity: active ? 1 : 0.55 }}
                 >
                   {label}
                 </span>
