@@ -38,6 +38,7 @@ export default function ProductPage() {
   const [qty, setQty] = useState(1);
   const [wished, setWished] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [lightboxImg, setLightboxImg] = useState(null);
   const { addItem } = useCart();
 
   useEffect(() => {
@@ -250,11 +251,11 @@ export default function ProductPage() {
               {product.name}
             </h1>
 
-            {/* <div className="flex items-center gap-1.5 mt-2.5 text-sm" style={{ color: INK_SOFT }}>
+            <div className="flex items-center gap-1.5 mt-2.5 text-sm" style={{ color: INK_SOFT }}>
               <Star size={13} strokeWidth={1.5} style={{ fill: PEACH, color: PEACH }} />
               <span style={{ color: INK }}>{product.rating?.toFixed?.(1) ?? product.rating}</span>
               <span>· {product.reviewCount} reviews</span>
-            </div> */}
+            </div>
 
             <div className="flex items-baseline gap-3 mt-6">
               <span className={`${display.className} text-[26px]`} style={{ color: INK, fontWeight: 500 }}>
@@ -351,7 +352,7 @@ export default function ProductPage() {
         </div>
 
         {/* Reviews */}
-        {/* {reviews?.length > 0 && (
+        {reviews?.length > 0 && (
           <div className="mt-20 sm:mt-28">
             <h2 className="text-[11px] font-medium uppercase tracking-[0.18em] mb-8" style={{ color: INK }}>
               Customer Reviews
@@ -362,16 +363,37 @@ export default function ProductPage() {
                   <div className="flex items-center gap-1 mb-2 text-xs" style={{ color: INK_SOFT }}>
                     <Star size={12} strokeWidth={1.5} style={{ fill: PEACH, color: PEACH }} />
                     <span style={{ color: INK }}>{r.rating}</span>
+                    {r.isVerifiedPurchase && (
+                      <span className="ml-1" style={{ color: NEUTRAL }}>· Verified purchase</span>
+                    )}
                   </div>
+
                   <p className={`${display.className} text-sm leading-relaxed`} style={{ color: INK }}>
                     {r.comment}
                   </p>
+
+                  {/* Review images — only rendered when present */}
+                  {r.images?.length > 0 && (
+                    <div className="flex gap-2 mt-3 flex-wrap">
+                      {r.images.map((img, i) => (
+                        <button
+                          key={i}
+                          onClick={() => setLightboxImg(img)}
+                          className="relative w-14 h-14 overflow-hidden shrink-0"
+                          style={{ borderRadius: '3px', background: PEACH_WASH }}
+                        >
+                          <Image src={img} alt="" fill className="object-cover" sizes="56px" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
                   <p className="text-xs mt-3" style={{ color: INK_SOFT }}>{r.customerName}</p>
                 </div>
               ))}
             </div>
           </div>
-        )} */}
+        )}
 
         {/* Related */}
         {related?.length > 0 && (
@@ -419,6 +441,20 @@ export default function ProductPage() {
           >
             <Zap size={15} fill={PAPER} /> {sizeOutOfStock ? 'Sold out' : 'Buy now'}
           </button>
+        </div>,
+        document.body
+      )}
+
+      {/* Review-image lightbox — portaled, closes on backdrop click */}
+      {mounted && lightboxImg && createPortal(
+        <div
+          onClick={() => setLightboxImg(null)}
+          className="fixed inset-0 flex items-center justify-center p-6"
+          style={{ background: 'rgba(36,27,33,0.85)', zIndex: 10000 }}
+        >
+          <div className="relative w-full max-w-md aspect-square" onClick={(e) => e.stopPropagation()}>
+            <Image src={lightboxImg} alt="Review image" fill className="object-contain" sizes="90vw" />
+          </div>
         </div>,
         document.body
       )}

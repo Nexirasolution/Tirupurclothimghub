@@ -57,49 +57,49 @@ export default async function HomePage() {
       <BannerCarousel banners={JSON.parse(JSON.stringify(banners))} />
 
       {/* Shop by Category */}
-{plainCategories?.length > 0 && (
-  <section className="max-w-6xl mx-auto px-4 pt-14 pb-6">
-    <h1
-      className="text-xl sm:text-2xl font-bold tracking-[3px] uppercase mb-6 text-center"
-      style={{ color: COFFEE, fontFamily: FONT_SANS }}
-    >
-      Shop by Category
-    </h1>
-    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 sm:gap-4">
-      {plainCategories.map((c) => (
-        <Link
-          key={c._id}
-          href={`/category/${c.slug}`}
-          className="group  overflow-hidden transition-colors bg-white"
-          style={{ border: `1px solid ${HAIRLINE}` }}
-        >
-          {/* Image */}
-          <div className="relative w-full aspect-square overflow-hidden bg-neutral-50">
-            {c.image ? (
-              <img
-                src={c.image}
-                alt={c.name}
-                className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              />
-            ) : (
-              <div className="w-full h-full" style={{ background: LIGHT_PEACH }} />
-            )}
-          </div>
+      {plainCategories?.length > 0 && (
+        <section className="max-w-6xl mx-auto px-4 pt-14 pb-6">
+          <h1
+            className="text-xl sm:text-2xl font-bold tracking-[3px] uppercase mb-6 text-center"
+            style={{ color: COFFEE, fontFamily: FONT_SANS }}
+          >
+            Shop by Category
+          </h1>
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 sm:gap-4">
+            {plainCategories.map((c) => (
+              <Link
+                key={c._id}
+                href={`/category/${c.slug}`}
+                className="group  overflow-hidden transition-colors bg-white"
+                style={{ border: `1px solid ${HAIRLINE}` }}
+              >
+                {/* Image */}
+                <div className="relative w-full aspect-square overflow-hidden bg-neutral-50">
+                  {c.image ? (
+                    <img
+                      src={c.image}
+                      alt={c.name}
+                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                  ) : (
+                    <div className="w-full h-full" style={{ background: LIGHT_PEACH }} />
+                  )}
+                </div>
 
-          {/* Label */}
-          <div className="px-1.5 py-1.5 text-center" style={{ borderTop: `1px solid ${HAIRLINE}` }}>
-            <span
-              className="text-[10.5px] font-bold tracking-wide leading-tight line-clamp-2"
-              style={{ color: COFFEE, fontFamily: FONT_SANS }}
-            >
-              {c.name}
-            </span>
+                {/* Label */}
+                <div className="px-1.5 py-1.5 text-center" style={{ borderTop: `1px solid ${HAIRLINE}` }}>
+                  <span
+                    className="text-[10.5px] font-bold tracking-wide leading-tight line-clamp-2"
+                    style={{ color: COFFEE, fontFamily: FONT_SANS }}
+                  >
+                    {c.name}
+                  </span>
+                </div>
+              </Link>
+            ))}
           </div>
-        </Link>
-      ))}
-    </div>
-  </section>
-)}
+        </section>
+      )}
 
       {/* Intro / Featured collection — centered copy, up to 6 New Arrivals, CTA */}
       <section className="max-w-6xl mx-auto px-4 pt-16 pb-16 text-center">
@@ -141,17 +141,14 @@ export default async function HomePage() {
         </Link>
       </section>
 
-      
-
-
       {/* Combo Offers */}
-      {/* {plainCombos?.length > 0 && (
-        <section className="py-16 bg-white border-t border-neutral-100">
+      {plainCombos?.length > 0 && (
+        <section className="py-16 bg-white border-t" style={{ borderColor: HAIRLINE }}>
           <div className="max-w-6xl mx-auto px-4">
             <div className="flex flex-col items-center text-center mb-8">
               <span
-                className="text-[11px] font-bold uppercase tracking-[3px] mb-2"
-                style={{ color: LIGHT_PEACH, fontFamily: FONT_SANS }}
+                className="text-[11px] font-bold uppercase tracking-[3px] mb-3 px-3 py-1"
+                style={{ color: COFFEE, background: LIGHT_PEACH, fontFamily: FONT_SANS }}
               >
                 Save More
               </span>
@@ -174,20 +171,19 @@ export default async function HomePage() {
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-5">
-              {plainCombos.map((c, idx) => {
+              {plainCombos.map((c) => {
                 const savings = c.originalPrice > c.comboPrice ? c.originalPrice - c.comboPrice : 0;
                 const pct = c.originalPrice > 0 ? Math.round((savings / c.originalPrice) * 100) : 0;
-                const isFeatured = idx === 0;
 
                 return (
                   <Link
                     key={c._id}
                     href={`/combo/${c.slug}`}
-                    className={`group relative rounded-xl overflow-hidden transition-colors ${isFeatured ? 'sm:col-span-1 row-span-1' : ''}`}
+                    className="group relative overflow-hidden bg-white transition-colors"
                     style={{ border: `1px solid ${HAIRLINE}` }}
-                  > */}
+                  >
                     {/* Image */}
-                    {/* <div className={`relative w-full overflow-hidden bg-neutral-50 ${isFeatured ? 'aspect-[4/5]' : 'aspect-square'}`}>
+                    <div className="relative w-full aspect-square overflow-hidden bg-neutral-50">
                       {c.image && (
                         <img
                           src={c.image}
@@ -197,25 +193,42 @@ export default async function HomePage() {
                       )}
                       {pct > 0 && (
                         <div
-                          className="absolute top-2 left-2 bg-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1"
-                          style={{ color: COFFEE, border: `1px solid ${HAIRLINE}`, fontFamily: FONT_SANS }}
+                          className="absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 flex items-center gap-1"
+                          style={{ color: COFFEE, background: LIGHT_PEACH, fontFamily: FONT_SANS }}
                         >
                           <Tag size={9} /> {pct}% off
                         </div>
                       )}
-                    </div> */}
+                    </div>
 
                     {/* Info */}
-                    {/* <div className="p-3 bg-white">
-                      <p className="text-sm font-bold line-clamp-1" style={{ color: COFFEE, fontFamily: FONT_SANS }}>{c.name}</p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="font-bold text-sm" style={{ color: COFFEE, fontFamily: FONT_SANS }}>{formatINR(c.comboPrice)}</span>
+                    <div className="p-3" style={{ borderTop: `1px solid ${HAIRLINE}` }}>
+                      <p
+                        className="text-[13px] font-bold tracking-wide line-clamp-1"
+                        style={{ color: COFFEE, fontFamily: FONT_SANS }}
+                      >
+                        {c.name}
+                      </p>
+                      <div className="flex items-baseline gap-2 mt-1.5">
+                        <span className="font-bold text-sm" style={{ color: COFFEE, fontFamily: FONT_SANS }}>
+                          {formatINR(c.comboPrice)}
+                        </span>
                         {savings > 0 && (
-                          <span className="text-[11px] line-through font-light" style={{ color: COFFEE_FAINT, fontFamily: FONT_SANS }}>{formatINR(c.originalPrice)}</span>
+                          <span
+                            className="text-[11px] line-through font-light"
+                            style={{ color: COFFEE_FAINT, fontFamily: FONT_SANS }}
+                          >
+                            {formatINR(c.originalPrice)}
+                          </span>
                         )}
                       </div>
                       {savings > 0 && (
-                        <p className="text-[11px] font-bold mt-0.5" style={{ color: COFFEE_FAINT, fontFamily: FONT_SANS }}>Save {formatINR(savings)}</p>
+                        <p
+                          className="text-[10.5px] font-bold mt-1 tracking-wide uppercase"
+                          style={{ color: COFFEE_FAINT, fontFamily: FONT_SANS }}
+                        >
+                          Save {formatINR(savings)}
+                        </p>
                       )}
                     </div>
                   </Link>
@@ -223,15 +236,17 @@ export default async function HomePage() {
               })}
             </div>
 
-            <div className="mt-6 text-center sm:hidden">
-              <Link href="/combo" className="text-sm font-bold" style={{ color: COFFEE, fontFamily: FONT_SANS }}>View all combos →</Link>
+            <div className="mt-8 text-center sm:hidden">
+              <Link href="/combos" className="text-sm font-bold" style={{ color: COFFEE, fontFamily: FONT_SANS }}>
+                View all combos →
+              </Link>
             </div>
           </div>
         </section>
-      )} */}
+      )}
 
       {/* Reviews */}
-      {/* <ReviewSection reviews={JSON.parse(JSON.stringify(reviews))} /> */}
+      <ReviewSection reviews={JSON.parse(JSON.stringify(reviews))} />
 
       {/* Reels */}
       {/* <ReelsSection reels={JSON.parse(JSON.stringify(reels))} /> */}
