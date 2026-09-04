@@ -122,6 +122,76 @@ export function CartProvider({ children }) {
     });
   }, []);
 
+  // Adds several lines at once (e.g. all colors of a color-pack combo) as a
+  // single state update, with one summary toast instead of one per line.
+  const addItems = useCallback((newItems) => {
+    let blockedCount = 0;
+    let clampedCount = 0;
+    let addedCount = 0;
+
+    setItems((prev) => {
+      let next = [...prev];
+
+      for (const item of newItems) {
+        const idx = next.findIndex(
+          (i) =>
+            i.productId === item.productId &&
+            i.variantId === item.variantId &&
+            i.size === item.size &&
+            i.comboId === item.comboId
+        );
+        const stockLimit = typeof item.stock === 'number' ? item.stock : Infinity;
+
+        if (idx > -1) {
+          const currentQty = next[idx].qty;
+          if (currentQty >= stockLimit) {
+            blockedCount++;
+            continue;
+          }
+          const desiredQty = currentQty + item.qty;
+          const finalQty = Math.min(desiredQty, stockLimit);
+          if (finalQty < desiredQty) clampedCount++;
+          next[idx] = { ...next[idx], qty: finalQty, stock: stockLimit };
+          addedCount++;
+          continue;
+        }
+
+        if (stockLimit <= 0) {
+          blockedCount++;
+          continue;
+        }
+
+        const finalQty = Math.min(item.qty, stockLimit);
+        if (finalQty < item.qty) clampedCount++;
+        next = [...next, { ...item, qty: finalQty }];
+        addedCount++;
+      }
+
+      return next;
+    });
+
+    if (addedCount === 0 && blockedCount > 0) {
+      brandToast('Sorry, those items are out of stock', {
+        icon: '⚠️',
+        style: { ...toastBase.style, borderLeftColor: RED },
+      });
+      return;
+    }
+
+    if (clampedCount > 0 || blockedCount > 0) {
+      brandToast('Added to cart — some quantities were limited by stock', {
+        icon: '⚠️',
+        style: { ...toastBase.style, borderLeftColor: PINK_LIGHT },
+      });
+      return;
+    }
+
+    brandToast('Added to cart', {
+      icon: '✓',
+      style: { ...toastBase.style, borderLeftColor: PINK },
+    });
+  }, []);
+
   const updateQty = useCallback((key, qty) => {
     setItems((prev) =>
       prev.map((i) => {
@@ -173,6 +243,7 @@ export function CartProvider({ children }) {
       value={{
         items,
         addItem,
+        addItems,
         updateQty,
         removeItem,
         setItemStock,

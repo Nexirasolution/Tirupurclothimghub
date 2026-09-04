@@ -1,132 +1,188 @@
 export const dynamic = 'force-dynamic';
 import { dbConnect } from '@/lib/mongodb';
 import Combo from '@/models/Combo';
-import Image from 'next/image';
 import { formatINR } from '@/lib/utils';
 import AddComboButton from '@/components/AddComboButton';
+import ColorPackSelector from '@/components/ColorPackSelector';
+import ComboImageGallery from '@/components/ComboImageGallery';
 import { Package, Tag, CheckCircle2, RotateCcw, Shield, Truck } from 'lucide-react';
+
+const INK = '#241B21';
+const INK_SOFT = '#9C877D';
+const PEACH = '#D9946A';
+const PEACH_LIGHT = '#F7EDE4';
+const LINE = '#EEE3DA';
+const PAPER = '#FFFFFF';
+const SAGE = '#7C9473';
+const FONT_SERIF = "Georgia, 'Times New Roman', serif";
 
 export default async function ComboPage({ params }) {
   await dbConnect();
   const combo = await Combo.findOne({ slug: params.slug, isActive: true })
     .populate('products.product', 'name slug variants')
+    .populate('baseProduct', 'name slug variants')
     .lean();
 
   if (!combo) {
-    return <div className="max-w-3xl mx-auto px-4 py-20 text-center text-neutral-400">Combo not found.</div>;
+    return <div className="max-w-3xl mx-auto px-4 py-20 text-center text-sm" style={{ color: INK_SOFT }}>Combo not found.</div>;
   }
 
   const plain = JSON.parse(JSON.stringify(combo));
-  const savings = plain.originalPrice - plain.comboPrice;
-  const savingsPct = plain.originalPrice > 0 ? Math.round((savings / plain.originalPrice) * 100) : 0;
+  const isColorPack = plain.type === 'color-pack';
+
+  const cheapestPack = isColorPack && plain.packOptions?.length
+    ? plain.packOptions.reduce((min, p) => (p.price < min.price ? p : min), plain.packOptions[0])
+    : null;
+
+  const bannerSavings = isColorPack
+    ? Math.max((cheapestPack?.originalPrice || 0) - (cheapestPack?.price || 0), 0)
+    : Math.max((plain.originalPrice || 0) - (plain.comboPrice || 0), 0);
+  const bannerOriginal = isColorPack ? cheapestPack?.originalPrice || 0 : plain.originalPrice || 0;
+  const savingsPct = bannerOriginal > 0 ? Math.round((bannerSavings / bannerOriginal) * 100) : 0;
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-10 pb-28 sm:pb-10" style={{ background: PAPER }}>
 
-      {/* Urgency banner */}
-      <div className="bg-pink-600 text-white text-center text-xs font-medium py-2 rounded-full mb-6">
-        Limited combo offer — Save {savingsPct}% when you bundle
-      </div>
-
-      <div className="grid sm:grid-cols-2 gap-8">
-
-        {/* Image */}
-        <div className="relative w-full aspect-square rounded-xl overflow-hidden border border-neutral-100">
-          {plain.image
-            ? <Image src={plain.image} alt={plain.name} fill sizes="(max-width:640px) 100vw, 50vw" className="object-cover" />
-            : <div className="w-full h-full bg-pink-50" />
-          }
-          {savingsPct > 0 && (
-            <div className="absolute top-3 left-3 bg-white text-pink-600 text-xs font-semibold px-3 py-1 rounded-full border border-pink-100">
-              {savingsPct}% OFF
-            </div>
-          )}
+      {savingsPct > 0 && (
+        <div
+          className="text-center text-xs py-2 mb-5 sm:mb-8"
+          style={{ color: PEACH, background: PEACH_LIGHT, borderRadius: '2px' }}
+        >
+          Limited combo offer — save {savingsPct}% when you bundle
         </div>
+      )}
 
-        {/* Details */}
-        <div className="flex flex-col">
-          <p className="text-xs font-semibold text-pink-500 uppercase tracking-widest mb-1">Exclusive Bundle</p>
-          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-neutral-900 leading-tight">{plain.name}</h1>
-          <p className="text-neutral-500 text-sm mt-2 leading-relaxed">{plain.description}</p>
+      {isColorPack ? (
+        <ColorPackSelector combo={plain} />
+      ) : (
+        <div className="grid sm:grid-cols-2 gap-6 sm:gap-10">
+          <ComboImageGallery
+            images={plain.images}
+            alt={plain.name}
+            peachLight={PEACH_LIGHT}
+            line={LINE}
+            badge={
+              savingsPct > 0 && (
+                <div
+                  className="absolute top-3 left-3 text-xs px-2.5 py-1"
+                  style={{ background: PAPER, color: PEACH, borderRadius: '2px' }}
+                >
+                  {savingsPct}% off
+                </div>
+              )
+            }
+          />
 
-          {/* Pricing */}
-          <div className="mt-5 bg-pink-50 rounded-xl p-4 border border-pink-100">
-            <div className="flex items-end gap-3">
-              <span className="text-3xl font-semibold text-pink-600">{formatINR(plain.comboPrice)}</span>
-              {plain.originalPrice > plain.comboPrice && (
-                <span className="text-neutral-300 line-through text-lg mb-0.5">{formatINR(plain.originalPrice)}</span>
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: PEACH }} />
+              <span className="text-xs" style={{ color: INK_SOFT }}>Exclusive bundle</span>
+            </div>
+            <h1
+              className="text-[26px] sm:text-[34px] leading-[1.1]"
+              style={{ color: INK, fontFamily: FONT_SERIF }}
+            >
+              {plain.name}
+            </h1>
+            {plain.description && (
+              <p className="text-sm mt-3 leading-relaxed max-w-[42ch]" style={{ color: INK_SOFT }}>{plain.description}</p>
+            )}
+
+            <div className="mt-5 sm:mt-6 py-4" style={{ borderTop: `1px solid ${LINE}`, borderBottom: `1px solid ${LINE}` }}>
+              <div className="flex items-baseline gap-3">
+                <span className="text-[26px] font-semibold" style={{ color: INK }}>{formatINR(plain.comboPrice)}</span>
+                {plain.originalPrice > plain.comboPrice && (
+                  <span className="line-through text-base" style={{ color: INK_SOFT, opacity: 0.6 }}>{formatINR(plain.originalPrice)}</span>
+                )}
+              </div>
+              {plain.originalPrice - plain.comboPrice > 0 && (
+                <div className="flex items-center gap-1.5 mt-1.5">
+                  <Tag size={13} style={{ color: SAGE }} strokeWidth={2} />
+                  <p className="text-sm" style={{ color: SAGE }}>You save {formatINR(plain.originalPrice - plain.comboPrice)} with this combo</p>
+                </div>
               )}
             </div>
-            {savings > 0 && (
-              <div className="flex items-center gap-1.5 mt-1.5">
-                <Tag size={13} className="text-green-600" />
-                <p className="text-green-600 text-sm font-medium">You save {formatINR(savings)} with this combo!</p>
+
+            <div className="mt-6">
+              <div className="flex items-center gap-2 mb-3">
+                <Package size={15} style={{ color: PEACH }} strokeWidth={1.75} />
+                <h3 className="text-sm" style={{ color: INK }}>What&rsquo;s included <span style={{ color: INK_SOFT }}>({plain.products?.length})</span></h3>
               </div>
-            )}
-          </div>
-
-          <div className="h-px bg-neutral-100 my-4" />
-
-          {/* What's included */}
-          <div className="mt-1">
-            <div className="flex items-center gap-2 mb-3">
-              <Package size={15} className="text-pink-600" />
-              <h3 className="font-semibold text-sm text-neutral-900">What's included ({plain.products?.length} items)</h3>
+              <div className="space-y-2">
+                {plain.products?.map((p, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-2.5 px-3 py-2.5"
+                    style={{ border: `1px solid ${LINE}`, borderRadius: '2px' }}
+                  >
+                    <CheckCircle2 size={15} style={{ color: SAGE }} className="shrink-0" strokeWidth={1.75} />
+                    <span className="text-sm" style={{ color: INK }}>{p.product?.name || 'Product unavailable'}</span>
+                    {p.size && (
+                      <span
+                        className="ml-auto text-xs px-2 py-0.5"
+                        style={{ background: PEACH_LIGHT, color: INK_SOFT, borderRadius: '2px' }}
+                      >
+                        Size {p.size}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="space-y-2">
-              {plain.products?.map((p, i) => (
-                <div key={i} className="flex items-center gap-2 bg-white rounded-lg px-3 py-2 border border-neutral-100">
-                  <CheckCircle2 size={15} className="text-green-600 shrink-0" />
-                  <span className="text-sm text-neutral-700 font-medium">{p.product?.name}</span>
-                  {p.size && <span className="ml-auto text-xs bg-pink-50 border border-pink-100 rounded-full px-2 py-0.5 text-neutral-500">Size {p.size}</span>}
-                </div>
-              ))}
+
+            {/* Desktop / tablet inline CTA */}
+            <div className="hidden sm:block mt-8">
+              <AddComboButton combo={plain} />
+              <p className="text-xs text-center mt-2.5" style={{ color: INK_SOFT }}>
+                Combo price applies automatically at checkout
+              </p>
             </div>
           </div>
+        </div>
+      )}
 
-          {/* CTA */}
-          <div className="mt-5">
-            <AddComboButton combo={plain} />
+      <div className="mt-10 sm:mt-14 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+        <div className="flex gap-3 items-start py-3" style={{ borderTop: `1px solid ${LINE}` }}>
+          <Truck size={18} style={{ color: PEACH }} className="shrink-0 mt-0.5" strokeWidth={1.5} />
+          <div>
+            <p className="text-sm" style={{ color: INK }}>Free delivery</p>
+            <p className="text-xs mt-0.5" style={{ color: INK_SOFT }}>Free shipping on all combo orders across India.</p>
           </div>
-          <p className="text-xs text-center text-neutral-400 mt-2">
-            Combo price applies automatically at checkout
+        </div>
+        <div className="flex gap-3 items-start py-3" style={{ borderTop: `1px solid ${LINE}` }}>
+          <RotateCcw size={18} style={{ color: PEACH }} className="shrink-0 mt-0.5" strokeWidth={1.5} />
+          <div>
+            <p className="text-sm" style={{ color: INK }}>7-day returns</p>
+            <p className="text-xs mt-0.5" style={{ color: INK_SOFT }}>Not satisfied? Return within 7 days for a full refund.</p>
+          </div>
+        </div>
+        <div className="flex gap-3 items-start py-3" style={{ borderTop: `1px solid ${LINE}` }}>
+          <Shield size={18} style={{ color: PEACH }} className="shrink-0 mt-0.5" strokeWidth={1.5} />
+          <div>
+            <p className="text-sm" style={{ color: INK }}>100% genuine</p>
+            <p className="text-xs mt-0.5" style={{ color: INK_SOFT }}>Every piece is quality-checked before dispatch.</p>
+          </div>
+        </div>
+      </div>
+
+      {!isColorPack && plain.originalPrice > plain.comboPrice && (
+        <div className="mt-8 sm:mt-10 pt-6 text-center" style={{ borderTop: `1px solid ${LINE}` }}>
+          <p className="text-sm" style={{ color: INK_SOFT }}>
+            Buying individually would cost{' '}
+            <span className="line-through">{formatINR(plain.originalPrice)}</span> — get this combo for just{' '}
+            <span style={{ color: PEACH }}>{formatINR(plain.comboPrice)}</span>
           </p>
         </div>
-      </div>
+      )}
 
-      {/* Trust + Policy section */}
-      <div className="mt-10 grid sm:grid-cols-3 gap-4">
-        <div className="border border-neutral-100 rounded-xl p-4 flex gap-3 items-start">
-          <Truck size={20} className="text-pink-600 shrink-0 mt-0.5" />
-          <div>
-            <p className="font-semibold text-sm text-neutral-900">Free Delivery</p>
-            <p className="text-xs text-neutral-400 mt-0.5">Free shipping on all combo orders across India.</p>
-          </div>
+      {!isColorPack && (
+        <div
+          className="sm:hidden fixed bottom-0 left-0 right-0 z-40 px-4 py-3"
+          style={{ background: PAPER, borderTop: `1px solid ${LINE}` }}
+        >
+          <AddComboButton combo={plain} />
         </div>
-        <div className="border border-neutral-100 rounded-xl p-4 flex gap-3 items-start">
-          <RotateCcw size={20} className="text-pink-600 shrink-0 mt-0.5" />
-          <div>
-            <p className="font-semibold text-sm text-neutral-900">7-Day Returns</p>
-            <p className="text-xs text-neutral-400 mt-0.5">Not satisfied? Return within 7 days for a full refund — no questions asked.</p>
-          </div>
-        </div>
-        <div className="border border-neutral-100 rounded-xl p-4 flex gap-3 items-start">
-          <Shield size={20} className="text-pink-600 shrink-0 mt-0.5" />
-          <div>
-            <p className="font-semibold text-sm text-neutral-900">100% Genuine</p>
-            <p className="text-xs text-neutral-400 mt-0.5">Every piece is quality-checked before dispatch. What you see is what you get.</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Bottom reassurance */}
-      <div className="mt-6 border-t border-neutral-100 pt-6 text-center">
-        <p className="text-sm text-neutral-400">
-          Buying individually would cost{' '}
-          <span className="line-through">{formatINR(plain.originalPrice)}</span> — get this combo for just{' '}
-          <span className="text-pink-600 font-semibold">{formatINR(plain.comboPrice)}</span>
-        </p>
-      </div>
+      )}
 
     </div>
   );

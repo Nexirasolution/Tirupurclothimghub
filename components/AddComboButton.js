@@ -4,6 +4,10 @@ import { useCart } from './CartContext';
 import { useRouter } from 'next/navigation';
 import { ShoppingBag, Zap } from 'lucide-react';
 
+const PEACH = '#D9946A';
+const PEACH_DARK = '#C57F55';
+const PAPER = '#FFFFFF';
+
 export default function AddComboButton({ combo }) {
   const { addItem } = useCart();
   const router = useRouter();
@@ -13,7 +17,7 @@ export default function AddComboButton({ combo }) {
     variantId: 'combo',
     comboId: combo._id,
     name: combo.name,
-    image: combo.image,
+    image: combo.images?.[0],
     color: '-',
     size: 'Combo',
     price: combo.comboPrice,
@@ -30,21 +34,24 @@ export default function AddComboButton({ combo }) {
   }
 
   return (
-    <div className="flex flex-col gap-3 mt-6">
-      <button
-        onClick={handleBuyNow}
-        className="w-full flex items-center justify-center gap-2 text-white font-medium py-3.5 rounded-full transition-colors active:scale-95 bg-pink-600 hover:bg-pink-700"
-      >
-        <Zap size={18} fill="white" />
-        Buy Now
-      </button>
-
+    <div className="flex gap-2.5">
       <button
         onClick={handleAddToCart}
-        className="w-full flex items-center justify-center gap-2 font-medium py-3 rounded-full active:scale-95 transition-colors border border-pink-600 text-pink-600 bg-white hover:bg-pink-50"
+        className="flex-1 flex items-center justify-center gap-2 text-sm font-medium py-3 rounded-full active:scale-[0.98] transition-transform"
+        style={{ border: `1px solid ${PEACH}`, color: PEACH, background: PAPER }}
       >
-        <ShoppingBag size={17} />
-        Add to Cart
+        <ShoppingBag size={16} strokeWidth={1.75} />
+        Add to cart
+      </button>
+      <button
+        onClick={handleBuyNow}
+        className="flex-1 flex items-center justify-center gap-2 text-sm font-medium py-3 rounded-full transition-colors active:scale-[0.98]"
+        style={{ background: PEACH, color: PAPER }}
+        onMouseEnter={(e) => (e.currentTarget.style.background = PEACH_DARK)}
+        onMouseLeave={(e) => (e.currentTarget.style.background = PEACH)}
+      >
+        <Zap size={16} fill="currentColor" strokeWidth={0} />
+        Buy now
       </button>
     </div>
   );

@@ -142,108 +142,130 @@ export default async function HomePage() {
       </section>
 
       {/* Combo Offers */}
-      {plainCombos?.length > 0 && (
-        <section className="py-16 bg-white border-t" style={{ borderColor: HAIRLINE }}>
-          <div className="max-w-6xl mx-auto px-4">
-            <div className="flex flex-col items-center text-center mb-8">
-              <span
-                className="text-[11px] font-bold uppercase tracking-[3px] mb-3 px-3 py-1"
-                style={{ color: COFFEE, background: LIGHT_PEACH, fontFamily: FONT_SANS }}
-              >
-                Save More
-              </span>
-              <h2
-                className="text-xl sm:text-2xl font-bold tracking-[1px]"
-                style={{ color: COFFEE, fontFamily: FONT_SANS }}
-              >
-                Combo Offers
-              </h2>
-              <p className="text-sm mt-1 font-light" style={{ color: COFFEE_FAINT, fontFamily: FONT_SANS }}>
-                Buy together, save together
-              </p>
-              <Link
-                href="/combos"
-                className="hidden sm:flex items-center gap-1 text-sm font-bold hover:gap-2 transition-all mt-3"
-                style={{ color: COFFEE, fontFamily: FONT_SANS }}
-              >
-                View all <ArrowRight size={14} />
-              </Link>
-            </div>
+{plainCombos?.length > 0 && (
+  <section className="py-16 bg-white border-t" style={{ borderColor: HAIRLINE }}>
+    <div className="max-w-6xl mx-auto px-4">
+      <div className="flex flex-col items-center text-center mb-8">
+        <span
+          className="text-[11px] font-bold uppercase tracking-[3px] mb-3 px-3 py-1"
+          style={{ color: COFFEE, background: LIGHT_PEACH, fontFamily: FONT_SANS }}
+        >
+          Save More
+        </span>
+        <h2
+          className="text-xl sm:text-2xl font-bold tracking-[1px]"
+          style={{ color: COFFEE, fontFamily: FONT_SANS }}
+        >
+          Combo Offers
+        </h2>
+        <p className="text-sm mt-1 font-light" style={{ color: COFFEE_FAINT, fontFamily: FONT_SANS }}>
+          Buy together, save together
+        </p>
+        <Link
+          href="/combos"
+          className="hidden sm:flex items-center gap-1 text-sm font-bold hover:gap-2 transition-all mt-3"
+          style={{ color: COFFEE, fontFamily: FONT_SANS }}
+        >
+          View all <ArrowRight size={14} />
+        </Link>
+      </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-5">
-              {plainCombos.map((c) => {
-                const savings = c.originalPrice > c.comboPrice ? c.originalPrice - c.comboPrice : 0;
-                const pct = c.originalPrice > 0 ? Math.round((savings / c.originalPrice) * 100) : 0;
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-5">
+        {plainCombos.map((c) => {
+          const isColorPack = c.type === 'color-pack';
+          const cheapestPack = isColorPack && c.packOptions?.length
+            ? c.packOptions.reduce((min, p) => (p.price < min.price ? p : min), c.packOptions[0])
+            : null;
 
-                return (
-                  <Link
-                    key={c._id}
-                    href={`/combo/${c.slug}`}
-                    className="group relative overflow-hidden bg-white transition-colors"
-                    style={{ border: `1px solid ${HAIRLINE}` }}
+          // Support both the current `images[]` array and, defensively, a
+          // legacy singular `image` field on any older documents that
+          // haven't been re-saved since the schema migration.
+          const cover = c.images?.[0] || c.image;
+
+          const displayPrice = isColorPack ? cheapestPack?.price ?? 0 : c.comboPrice;
+          const displayOriginal = isColorPack ? cheapestPack?.originalPrice ?? 0 : c.originalPrice;
+          const savings = displayOriginal > displayPrice ? displayOriginal - displayPrice : 0;
+          const pct = displayOriginal > 0 ? Math.round((savings / displayOriginal) * 100) : 0;
+
+          return (
+            <Link
+              key={c._id}
+              href={`/combo/${c.slug}`}
+              className="group relative overflow-hidden bg-white transition-colors"
+              style={{ border: `1px solid ${HAIRLINE}` }}
+            >
+              {/* Image */}
+              <div className="relative w-full aspect-square overflow-hidden bg-neutral-50">
+                {cover ? (
+                  <img
+                    src={cover}
+                    alt={c.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                ) : (
+                  <div className="w-full h-full" style={{ background: LIGHT_PEACH }} />
+                )}
+                {pct > 0 && (
+                  <div
+                    className="absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 flex items-center gap-1"
+                    style={{ color: COFFEE, background: LIGHT_PEACH, fontFamily: FONT_SANS }}
                   >
-                    {/* Image */}
-                    <div className="relative w-full aspect-square overflow-hidden bg-neutral-50">
-                      {c.image && (
-                        <img
-                          src={c.image}
-                          alt={c.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                      )}
-                      {pct > 0 && (
-                        <div
-                          className="absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 flex items-center gap-1"
-                          style={{ color: COFFEE, background: LIGHT_PEACH, fontFamily: FONT_SANS }}
-                        >
-                          <Tag size={9} /> {pct}% off
-                        </div>
-                      )}
-                    </div>
+                    <Tag size={9} /> {pct}% off
+                  </div>
+                )}
+                {isColorPack && (
+                  <div
+                    className="absolute top-2 right-2 text-[10px] font-medium px-2 py-0.5"
+                    style={{ background: COFFEE, color: '#fff' }}
+                  >
+                    Color Pack
+                  </div>
+                )}
+              </div>
 
-                    {/* Info */}
-                    <div className="p-3" style={{ borderTop: `1px solid ${HAIRLINE}` }}>
-                      <p
-                        className="text-[13px] font-bold tracking-wide line-clamp-1"
-                        style={{ color: COFFEE, fontFamily: FONT_SANS }}
-                      >
-                        {c.name}
-                      </p>
-                      <div className="flex items-baseline gap-2 mt-1.5">
-                        <span className="font-bold text-sm" style={{ color: COFFEE, fontFamily: FONT_SANS }}>
-                          {formatINR(c.comboPrice)}
-                        </span>
-                        {savings > 0 && (
-                          <span
-                            className="text-[11px] line-through font-light"
-                            style={{ color: COFFEE_FAINT, fontFamily: FONT_SANS }}
-                          >
-                            {formatINR(c.originalPrice)}
-                          </span>
-                        )}
-                      </div>
-                      {savings > 0 && (
-                        <p
-                          className="text-[10.5px] font-bold mt-1 tracking-wide uppercase"
-                          style={{ color: COFFEE_FAINT, fontFamily: FONT_SANS }}
-                        >
-                          Save {formatINR(savings)}
-                        </p>
-                      )}
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
+              {/* Info */}
+              <div className="p-3" style={{ borderTop: `1px solid ${HAIRLINE}` }}>
+                <p
+                  className="text-[13px] font-bold tracking-wide line-clamp-1"
+                  style={{ color: COFFEE, fontFamily: FONT_SANS }}
+                >
+                  {c.name}
+                </p>
+                <div className="flex items-baseline gap-2 mt-1.5">
+                  <span className="font-bold text-sm" style={{ color: COFFEE, fontFamily: FONT_SANS }}>
+                    {isColorPack && 'From '}{formatINR(displayPrice)}
+                  </span>
+                  {savings > 0 && (
+                    <span
+                      className="text-[11px] line-through font-light"
+                      style={{ color: COFFEE_FAINT, fontFamily: FONT_SANS }}
+                    >
+                      {formatINR(displayOriginal)}
+                    </span>
+                  )}
+                </div>
+                {savings > 0 && (
+                  <p
+                    className="text-[10.5px] font-bold mt-1 tracking-wide uppercase"
+                    style={{ color: COFFEE_FAINT, fontFamily: FONT_SANS }}
+                  >
+                    Save {formatINR(savings)}
+                  </p>
+                )}
+              </div>
+            </Link>
+          );
+        })}
+      </div>
 
-            <div className="mt-8 text-center sm:hidden">
-              <Link href="/combos" className="text-sm font-bold" style={{ color: COFFEE, fontFamily: FONT_SANS }}>
-                View all combos →
-              </Link>
-            </div>
-          </div>
-        </section>
-      )}
+      <div className="mt-8 text-center sm:hidden">
+        <Link href="/combos" className="text-sm font-bold" style={{ color: COFFEE, fontFamily: FONT_SANS }}>
+          View all combos →
+        </Link>
+      </div>
+    </div>
+  </section>
+)}
 
       {/* Reviews */}
       <ReviewSection reviews={JSON.parse(JSON.stringify(reviews))} />

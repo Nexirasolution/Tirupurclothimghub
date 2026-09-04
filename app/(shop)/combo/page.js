@@ -5,6 +5,14 @@ import Link from 'next/link';
 import { formatINR } from '@/lib/utils';
 import { Tag } from 'lucide-react';
 
+const INK = '#241B21';
+const INK_SOFT = '#9C877D';
+const PEACH = '#D9946A';
+const PEACH_LIGHT = '#F7EDE4';
+const LINE = '#EEE3DA';
+const PAPER = '#FFFFFF';
+const FONT_SERIF = "Georgia, 'Times New Roman', serif";
+
 async function getCombos() {
   await dbConnect();
   const combos = await Combo.find({ isActive: true }).sort({ createdAt: -1 }).lean();
@@ -15,58 +23,84 @@ export default async function CombosPage() {
   const combos = await getCombos();
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 min-h-[60vh]">
-      <div className="flex flex-col items-center text-center mb-8">
-        <span className="text-[11px] font-semibold text-pink-500 uppercase tracking-[0.2em] mb-2">
-          Save More
-        </span>
-        <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-neutral-900">Combo Offers</h1>
-        <p className="text-neutral-400 text-sm mt-1">Buy together, save together</p>
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-14 min-h-[60vh]" style={{ background: PAPER }}>
+      <div className="flex flex-col items-center text-center mb-10 sm:mb-12">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="w-1.5 h-1.5 rounded-full" style={{ background: PEACH }} />
+          <span className="text-xs" style={{ color: INK_SOFT }}>Save more</span>
+        </div>
+        <h1
+          className="text-[28px] sm:text-4xl leading-tight"
+          style={{ color: INK, fontFamily: FONT_SERIF }}
+        >
+          Combo Offers
+        </h1>
+        <p className="text-sm mt-2" style={{ color: INK_SOFT }}>Buy together, save together</p>
       </div>
 
       {combos.length === 0 ? (
-        <div className="text-center py-16 text-neutral-400">
-          <Tag size={36} className="mx-auto mb-2 text-pink-300" />
+        <div className="text-center py-20" style={{ color: INK_SOFT }}>
+          <Tag size={32} className="mx-auto mb-3" style={{ color: PEACH, opacity: 0.4 }} strokeWidth={1.5} />
           <p className="text-sm">No combo offers available right now</p>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
           {combos.map((c) => {
-            const savings = c.originalPrice > c.comboPrice ? c.originalPrice - c.comboPrice : 0;
-            const pct = c.originalPrice > 0 ? Math.round((savings / c.originalPrice) * 100) : 0;
+            const isColorPack = c.type === 'color-pack';
+            const cheapestPack = isColorPack && c.packOptions?.length
+              ? c.packOptions.reduce((min, p) => (p.price < min.price ? p : min), c.packOptions[0])
+              : null;
+
+            const displayPrice = isColorPack ? cheapestPack?.price ?? 0 : c.comboPrice;
+            const displayOriginal = isColorPack ? cheapestPack?.originalPrice ?? 0 : c.originalPrice;
+            const savings = displayOriginal > displayPrice ? displayOriginal - displayPrice : 0;
+            const pct = displayOriginal > 0 ? Math.round((savings / displayOriginal) * 100) : 0;
 
             return (
               <Link
                 key={c._id}
                 href={`/combo/${c.slug}`}
-                className="group relative rounded-xl overflow-hidden border border-neutral-100 hover:border-pink-200 transition-colors"
+                className="group block"
               >
-                <div className="relative w-full aspect-square overflow-hidden bg-pink-50">
-                  {c.image && (
+                <div
+                  className="relative w-full aspect-[4/5] overflow-hidden"
+                  style={{ background: PEACH_LIGHT, border: `1px solid ${LINE}`, borderRadius: '2px' }}
+                >
+                  {c.images?.[0] && (
                     <img
-                      src={c.image}
+                      src={c.images[0]}
                       alt={c.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                     />
                   )}
                   {pct > 0 && (
-                    <div className="absolute top-2 left-2 bg-white text-pink-600 text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 border border-pink-100">
-                      <Tag size={9} /> {pct}% OFF
+                    <div
+                      className="absolute top-2 left-2 text-[10px] font-medium px-2 py-1 flex items-center gap-1"
+                      style={{ background: PAPER, color: PEACH, borderRadius: '2px' }}
+                    >
+                      <Tag size={10} strokeWidth={2} /> {pct}% off
+                    </div>
+                  )}
+                  {isColorPack && (
+                    <div
+                      className="absolute top-2 right-2 text-[10px] font-medium px-2 py-1"
+                      style={{ background: INK, color: PAPER, borderRadius: '2px' }}
+                    >
+                      Color pack
                     </div>
                   )}
                 </div>
 
-                <div className="p-3 bg-white">
-                  <p className="text-sm font-medium text-neutral-900 line-clamp-1">{c.name}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-pink-600 font-semibold text-sm">{formatINR(c.comboPrice)}</span>
+                <div className="pt-2.5 sm:pt-3">
+                  <p className="text-[13px] sm:text-sm leading-snug line-clamp-1" style={{ color: INK }}>{c.name}</p>
+                  <div className="flex items-baseline gap-2 mt-1 flex-wrap">
+                    <span className="font-semibold text-sm" style={{ color: PEACH }}>
+                      {isColorPack && 'From '}{formatINR(displayPrice)}
+                    </span>
                     {savings > 0 && (
-                      <span className="text-[11px] text-neutral-300 line-through">{formatINR(c.originalPrice)}</span>
+                      <span className="text-[11px] line-through" style={{ color: INK_SOFT, opacity: 0.7 }}>{formatINR(displayOriginal)}</span>
                     )}
                   </div>
-                  {savings > 0 && (
-                    <p className="text-[11px] text-pink-500 font-medium mt-0.5">Save {formatINR(savings)}</p>
-                  )}
                 </div>
               </Link>
             );

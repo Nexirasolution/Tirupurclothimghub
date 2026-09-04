@@ -11,15 +11,40 @@ export async function GET(req) {
   const { searchParams } = new URL(req.url);
   const all = searchParams.get('all');
   const query = all ? {} : { isActive: true };
-  const combos = await Combo.find(query).populate('products.product', 'name slug variants').sort({ createdAt: -1 });
+  const combos = await Combo.find(query)
+    .populate('products.product', 'name slug variants')
+    .populate('baseProduct', 'name slug variants')
+    .sort({ createdAt: -1 });
   return NextResponse.json({ combos });
 }
 
 export const POST = requireAdmin(async (req) => {
   await dbConnect();
   const body = await req.json();
-  if (!body.name || !body.comboPrice) return NextResponse.json({ error: 'Combo name and price are required' }, { status: 400 });
-  const slug = slugify(body.name, { lower: true }) + '-' + Date.now().toString().slice(-4);
-  const combo = await Combo.create({ ...body, slug });
-  return NextResponse.json({ combo }, { status: 201 });
+
+  if (!body.name) {
+    return NextResponse.json({ error: 'Combo name is required' }, { status: 400 });
+  }
+
+  if (body.type === 'color-pack') {
+    if (!body.baseProduct) {
+      return NextResponse.json({ error: 'A base product is required for a color-pack combo' }, { status: 400 });
+    }
+    if (!Array.isArray(body.colors) || body.colors.length === 0) {
+      return NextResponse.json({ error: 'Add at least one color' }, { status: 400 });
+    }
+    if (!Array.isArray(body.packOptions) || body.packOptions.length === 0) {
+      return NextResponse.json({ error: 'Add at least one pack size option' }, { status: 400 });
+    }
+  } else if (!body.comboPrice) {
+    return NextResponse.json({ error: 'Combo price is required' }, { status: 400 });
+  }
+
+  try {
+    const slug = slugify(body.name, { lower: true }) + '-' + Date.now().toString().slice(-4);
+    const combo = await Combo.create({ ...body, slug });
+    return NextResponse.json({ combo }, { status: 201 });
+  } catch (err) {
+    return NextResponse.json({ error: err.message || 'Failed to create combo' }, { status: 400 });
+  }
 });
