@@ -285,7 +285,7 @@ export default async function HomePage() {
       </div>
 
       <div className="mt-8 text-center sm:hidden">
-        <Link href="/combos" className="text-sm font-bold" style={{ color: COFFEE, fontFamily: FONT_SANS }}>
+        <Link href="/combo" className="text-sm font-bold" style={{ color: COFFEE, fontFamily: FONT_SANS }}>
           View all combos →
         </Link>
       </div>

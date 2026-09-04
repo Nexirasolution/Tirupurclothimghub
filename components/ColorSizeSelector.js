@@ -36,7 +36,7 @@ export default function ColorSizeSelector({ variants, activeVariant, onColorChan
                   className="relative w-8 h-8 rounded-full transition-transform"
                   style={{
                     backgroundColor: v.colorHex || '#ccc',
-                    boxShadow: isActive ? `0 0 0 2px ${PAPER}, 0 0 0 3.5px ${PEACH}` : `0 0 0 1px ${LINE}`,
+                    // boxShadow: isActive ? `0 0 0 2px ${PAPER}, 0 0 0 3.5px ${PEACH}` : `0 0 0 1px ${LINE}`,
                     transform: isActive ? 'scale(1.08)' : 'scale(1)',
                   }}
                 >
