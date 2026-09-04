@@ -25,6 +25,9 @@ const HAIRLINE = '#EDE6DE';
 // Minimalist type: a clean, quiet sans. Headings are bold + tracked out;
 // body copy stays light so the boldness reads as intentional, not noisy.
 const FONT_SANS = "'Helvetica Neue', Helvetica, Arial, sans-serif";
+// Premium editorial serif — reserved for the hero headline and tagline only,
+// so it reads as a deliberate accent rather than a full type-system change.
+const FONT_SERIF = "Georgia, 'Times New Roman', serif";
 
 // Featured Collection shows a teaser, not the full catalog
 const FEATURED_LIMIT = 6;
@@ -53,20 +56,31 @@ export default async function HomePage() {
   return (
     <div className="overflow-x-hidden bg-white">
 
-      {/* Banner */}
-      <BannerCarousel banners={JSON.parse(JSON.stringify(banners))} />
+      {/* Intro / hero copy — premium editorial opener */}
+      <section className="max-w-2xl mx-auto px-6 pt-16 sm:pt-24 pb-10 sm:pb-14 text-center">
+        <span
+          className="inline-block text-[10px] sm:text-[11px] font-semibold uppercase tracking-[4px]"
+          style={{ color: COFFEE_FAINT, fontFamily: FONT_SANS }}
+        >
+          The Mohith Trends Edit
+        </span>
 
-      {/* Intro copy — minimalist, centered */}
-      <section className="max-w-3xl mx-auto px-4 pt-16 pb-2 text-center">
-        <h2
-          className="text-xl sm:text-2xl font-bold tracking-[3px] uppercase"
-          style={{ color: COFFEE, fontFamily: FONT_SANS }}
+        <h1
+          className="mt-5 text-[26px] sm:text-[38px] leading-[1.2]"
+          style={{ color: COFFEE, fontFamily: FONT_SERIF, fontWeight: 400, letterSpacing: '-0.01em' }}
         >
           Crafted for the Trendsetters of Today
-        </h2>
+        </h1>
+
+        {/* Thin center divider — a quiet, premium separator instead of a rule */}
+        <div className="flex items-center justify-center gap-3 mt-6 sm:mt-7">
+          <span style={{ width: '28px', height: '1px', background: HAIRLINE }} />
+          <span className="w-1 h-1 rounded-full" style={{ background: LIGHT_PEACH }} />
+          <span style={{ width: '28px', height: '1px', background: HAIRLINE }} />
+        </div>
 
         <p
-          className="mt-5 text-sm sm:text-base leading-relaxed font-light"
+          className="mt-6 sm:mt-7 text-[13.5px] sm:text-[15px] leading-[1.8] font-light max-w-[46ch] mx-auto"
           style={{ color: COFFEE_FAINT, fontFamily: FONT_SANS }}
         >
           Experience the perfect blend of comfort, quality, and timeless fashion.
@@ -75,12 +89,15 @@ export default async function HomePage() {
         </p>
 
         <p
-          className="mt-4 text-sm sm:text-base tracking-[1px] italic font-light"
-          style={{ color: COFFEE, fontFamily: FONT_SANS }}
+          className="mt-5 sm:mt-6 text-sm sm:text-base tracking-[0.5px] italic"
+          style={{ color: COFFEE, fontFamily: FONT_SERIF }}
         >
           Wrap yourself in beauty every time you step out.
         </p>
       </section>
+
+      {/* Banner */}
+      <BannerCarousel banners={JSON.parse(JSON.stringify(banners))} />
 
       {/* Shop by Category */}
       {plainCategories?.length > 0 && (

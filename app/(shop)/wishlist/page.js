@@ -6,6 +6,13 @@ import { Heart } from 'lucide-react';
 import { useWishlist } from '@/components/WhishlistContext';
 import ProductCard from '@/components/ProductCard';
 
+const INK = '#241B21';
+const INK_SOFT = '#9C877D';
+const PEACH = '#D9946A';
+const PEACH_WASH = '#FBE8D9';
+const PAPER = '#FFFFFF';
+const FONT_SERIF = "Georgia, 'Times New Roman', serif";
+
 export default function WishlistPage() {
   const { wishlist } = useWishlist();
   const [products, setProducts] = useState([]);
@@ -45,29 +52,34 @@ export default function WishlistPage() {
   }, [wishlist]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 min-h-[60vh]">
-      <h1 className="text-2xl font-semibold tracking-tight text-neutral-900 mb-1">My Wishlist</h1>
-      <p className="text-neutral-400 text-sm mb-6">
-        {products.length > 0
-          ? `${products.length} item${products.length > 1 ? 's' : ''} saved`
-          : 'Items you save will show up here'}
-      </p>
+    <div className="max-w-6xl mx-auto px-5 sm:px-8 py-10 sm:py-16 min-h-[60vh]" style={{ background: PAPER }}>
+      <div className="mb-10">
+        <h1 className="text-[24px] sm:text-[28px]" style={{ fontFamily: FONT_SERIF, color: INK }}>
+          My Wishlist
+        </h1>
+        <p className="text-sm mt-1.5" style={{ color: INK_SOFT }}>
+          {products.length > 0
+            ? `${products.length} item${products.length > 1 ? 's' : ''} saved`
+            : 'Items you save will show up here'}
+        </p>
+      </div>
 
       {loading && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-10">
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="aspect-[3/4] rounded-xl bg-pink-50 animate-pulse" />
+            <div key={i} className="aspect-[3/4]" style={{ background: PEACH_WASH, borderRadius: '4px' }} />
           ))}
         </div>
       )}
 
       {!loading && products.length === 0 && (
-        <div className="text-center py-16 text-neutral-400">
-          <Heart size={36} className="mx-auto mb-2 text-pink-300" />
-          <p className="text-sm mb-4">Your wishlist is empty</p>
+        <div className="text-center py-20">
+          <Heart size={28} strokeWidth={1.5} className="mx-auto mb-3" style={{ color: PEACH, opacity: 0.5 }} />
+          <p className="text-sm mb-5" style={{ color: INK_SOFT }}>Your wishlist is empty</p>
           <Link
             href="/"
-            className="inline-block bg-pink-600 text-white font-medium text-sm px-5 py-2.5 rounded-full hover:bg-pink-700 transition-colors"
+            className="inline-block px-6 py-3 text-sm font-medium transition-opacity active:opacity-80"
+            style={{ background: PEACH, color: PAPER, borderRadius: '4px' }}
           >
             Start Shopping
           </Link>
@@ -75,7 +87,7 @@ export default function WishlistPage() {
       )}
 
       {!loading && products.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-10">
           {products.map((product) => (
             <ProductCard key={product._id} product={product} />
           ))}

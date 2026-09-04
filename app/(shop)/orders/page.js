@@ -6,14 +6,25 @@ import toast from 'react-hot-toast';
 import { Package, Phone, Truck, Star, X, Loader2, ImagePlus, CheckCircle2 } from 'lucide-react';
 import { formatINR } from '@/lib/utils';
 
+const INK = '#241B21';
+const INK_SOFT = '#9C877D';
+const PEACH = '#D9946A';
+const PEACH_LIGHT = '#F7EDE4';
+const PEACH_WASH = '#FBE8D9';
+const LINE = '#EEE3DA';
+const PAPER = '#FFFFFF';
+const SAGE = '#7C9473';
+const RUST = '#B0503A';
+const FONT_SERIF = "Georgia, 'Times New Roman', serif";
+
 const STATUS_STYLES = {
-  placed: 'bg-neutral-50 text-neutral-600 border border-neutral-200',
-  confirmed: 'bg-pink-50 text-pink-600 border border-pink-200',
-  packed: 'bg-pink-50 text-pink-600 border border-pink-200',
-  shipped: 'bg-pink-100 text-pink-700 border border-pink-200',
-  delivered: 'bg-green-50 text-green-700 border border-green-200',
-  cancelled: 'bg-red-50 text-red-600 border border-red-200',
-  returned: 'bg-neutral-100 text-neutral-600 border border-neutral-200'
+  placed:    { color: INK_SOFT, background: '#F5F1EC' },
+  confirmed: { color: PEACH,    background: PEACH_LIGHT },
+  packed:    { color: PEACH,    background: PEACH_LIGHT },
+  shipped:   { color: '#B8763F', background: PEACH_WASH },
+  delivered: { color: SAGE,     background: '#EEF2EA' },
+  cancelled: { color: RUST,     background: '#FBEAE6' },
+  returned:  { color: INK_SOFT, background: '#F5F1EC' },
 };
 
 function ReviewForm({ order, item, phone, onDone }) {
@@ -68,38 +79,49 @@ function ReviewForm({ order, item, phone, onDone }) {
   }
 
   return (
-    <div className="border border-pink-100 rounded-xl p-3 mt-2 bg-pink-50/50">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-semibold text-neutral-900">Rate {item.name}</span>
-        <button onClick={onDone} type="button"><X size={14} className="text-neutral-400" /></button>
+    <div className="p-3.5 mt-2" style={{ background: PEACH_LIGHT, borderRadius: '4px' }}>
+      <div className="flex items-center justify-between mb-2.5">
+        <span className="text-xs" style={{ color: INK }}>Rate {item.name}</span>
+        <button onClick={onDone} type="button">
+          <X size={13} strokeWidth={1.5} style={{ color: INK_SOFT }} />
+        </button>
       </div>
-      <div className="flex gap-1 mb-2">
+      <div className="flex gap-1 mb-2.5">
         {Array.from({ length: 5 }).map((_, i) => (
           <button key={i} type="button" onClick={() => setRating(i + 1)}>
-            <Star size={20} className={i < rating ? 'fill-pink-500 text-pink-500' : 'text-neutral-200'} />
+            <Star
+              size={18}
+              strokeWidth={1.5}
+              style={{ color: PEACH, fill: i < rating ? PEACH : 'transparent' }}
+            />
           </button>
         ))}
       </div>
       <textarea
         rows={2}
         placeholder="How was the product?"
-        className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm mb-2 focus:outline-none focus:ring-2 focus:ring-pink-200"
+        className="w-full text-sm mb-2.5 px-3 py-2 outline-none"
+        style={{ border: `1px solid ${LINE}`, borderRadius: '3px', color: INK, background: PAPER }}
         value={comment}
         onChange={(e) => setComment(e.target.value)}
       />
-      <div className="flex flex-wrap gap-2 mb-2">
+      <div className="flex flex-wrap gap-2 mb-3">
         {images.map((url, i) => (
-          <img key={i} src={url} alt="" className="w-12 h-12 rounded-lg object-cover border border-pink-100" />
+          <img key={i} src={url} alt="" className="w-11 h-11 object-cover" style={{ borderRadius: '3px', border: `1px solid ${LINE}` }} />
         ))}
-        <label className="w-12 h-12 rounded-lg border border-dashed border-pink-200 flex items-center justify-center cursor-pointer text-neutral-400">
-          {uploading ? <Loader2 size={16} className="animate-spin" /> : <ImagePlus size={16} />}
+        <label
+          className="w-11 h-11 flex items-center justify-center cursor-pointer"
+          style={{ border: `1px dashed ${PEACH}`, borderRadius: '3px', color: INK_SOFT }}
+        >
+          {uploading ? <Loader2 size={14} className="animate-spin" /> : <ImagePlus size={14} strokeWidth={1.5} />}
           <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} disabled={uploading} />
         </label>
       </div>
       <button
         onClick={submit}
         disabled={submitting}
-        className="bg-pink-600 text-white text-xs font-medium px-4 py-2 rounded-full disabled:opacity-50 hover:bg-pink-700 transition-colors"
+        className="text-xs font-medium px-4 py-2 transition-opacity active:opacity-80 disabled:opacity-50"
+        style={{ background: PEACH, color: PAPER, borderRadius: '3px' }}
       >
         {submitting ? 'Submitting…' : 'Submit Review'}
       </button>
@@ -169,15 +191,17 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8 min-h-[60vh]">
-      <h1 className="text-2xl font-semibold tracking-tight text-neutral-900 mb-1">My Orders</h1>
-      <p className="text-neutral-400 text-sm mb-6">
+    <div className="max-w-xl mx-auto px-5 py-10 sm:py-14 min-h-[60vh]" style={{ background: PAPER }}>
+      <h1 className="text-[24px] sm:text-[28px] mb-1.5" style={{ fontFamily: FONT_SERIF, color: INK }}>
+        My Orders
+      </h1>
+      <p className="text-sm mb-7" style={{ color: INK_SOFT }}>
         Enter the phone number you used at checkout to view your orders.
       </p>
 
       <form onSubmit={handleLookup} className="flex gap-2 mb-2">
         <div className="flex-1 relative">
-          <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-300" />
+          <Phone size={14} strokeWidth={1.5} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: INK_SOFT }} />
           <input
             type="tel"
             inputMode="numeric"
@@ -185,109 +209,114 @@ export default function OrdersPage() {
             onChange={(e) => setPhone(e.target.value)}
             placeholder="10-digit phone number"
             maxLength={10}
-            className="w-full pl-9 pr-3 py-2.5 rounded-full border border-neutral-200 text-sm focus:outline-none focus:ring-2 focus:ring-pink-200"
+            className="w-full pl-9 pr-3.5 py-2.5 text-sm outline-none"
+            style={{ border: `1px solid ${LINE}`, borderRadius: '3px', color: INK, background: PAPER }}
           />
         </div>
         <button
           type="submit"
           disabled={loading}
-          className="bg-pink-600 text-white font-medium text-sm px-5 py-2.5 rounded-full disabled:opacity-50 shrink-0 hover:bg-pink-700 transition-colors"
+          className="text-sm font-medium px-5 py-2.5 shrink-0 transition-opacity active:opacity-80 disabled:opacity-50"
+          style={{ background: PEACH, color: PAPER, borderRadius: '3px' }}
         >
-          {loading ? 'Searching...' : 'Find Orders'}
+          {loading ? 'Searching…' : 'Find Orders'}
         </button>
       </form>
 
-      {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+      {error && <p className="text-sm mb-4" style={{ color: RUST }}>{error}</p>}
 
       {orders !== null && orders.length === 0 && !error && (
-        <div className="text-center py-16 text-neutral-400">
-          <Package size={36} className="mx-auto mb-2 text-pink-300" />
-          <p className="text-sm">No orders found for this number</p>
+        <div className="text-center py-16">
+          <Package size={26} strokeWidth={1.5} className="mx-auto mb-3" style={{ color: PEACH, opacity: 0.5 }} />
+          <p className="text-sm" style={{ color: INK_SOFT }}>No orders found for this number</p>
         </div>
       )}
 
-      <div className="space-y-3 mt-4">
-        {orders?.map((o) => (
-          <div key={o._id} className="border border-neutral-100 rounded-2xl p-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-semibold text-neutral-400">#{o.orderNumber}</span>
-              <span
-                className={`text-[11px] font-semibold px-2 py-0.5 rounded-full capitalize ${
-                  STATUS_STYLES[o.status] || 'bg-neutral-100 text-neutral-600'
-                }`}
-              >
-                {o.status}
-              </span>
-            </div>
+      <div className="space-y-4 mt-6">
+        {orders?.map((o) => {
+          const statusStyle = STATUS_STYLES[o.status] || { color: INK_SOFT, background: '#F5F1EC' };
+          return (
+            <div key={o._id} className="p-4" style={{ border: `1px solid ${LINE}`, borderRadius: '4px' }}>
+              <div className="flex items-center justify-between mb-3.5">
+                <span className="text-xs" style={{ color: INK_SOFT }}>#{o.orderNumber}</span>
+                <span
+                  className="text-[10.5px] font-medium px-2.5 py-1 capitalize"
+                  style={{ ...statusStyle, borderRadius: '3px' }}
+                >
+                  {o.status}
+                </span>
+              </div>
 
-            <div className="space-y-2 mb-3">
-              {o.items.map((it, i) => {
-                const reviewKey = `${o._id}-${it.product}`;
-                const alreadyReviewed = reviewedMap[o._id]?.has(String(it.product));
-                const canReview = o.status === 'delivered' && it.product && !it.isCombo;
+              <div className="space-y-3 mb-3.5">
+                {o.items.map((it, i) => {
+                  const reviewKey = `${o._id}-${it.product}`;
+                  const alreadyReviewed = reviewedMap[o._id]?.has(String(it.product));
+                  const canReview = o.status === 'delivered' && it.product && !it.isCombo;
 
-                return (
-                  <div key={i}>
-                    <div className="flex items-center gap-2">
-                      <div className="w-12 h-12 rounded-lg overflow-hidden bg-pink-50 shrink-0 relative border border-neutral-100">
-                        {it.image && <Image src={it.image} alt={it.name} fill className="object-cover" />}
+                  return (
+                    <div key={i}>
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-11 h-11 overflow-hidden shrink-0 relative" style={{ background: PEACH_WASH, borderRadius: '3px' }}>
+                          {it.image && <Image src={it.image} alt={it.name} fill className="object-cover" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm truncate" style={{ color: INK }}>{it.name}</p>
+                          <p className="text-xs" style={{ color: INK_SOFT }}>Qty {it.qty}</p>
+                        </div>
+                        {canReview && (
+                          alreadyReviewed ? (
+                            <span className="flex items-center gap-1 text-[11px] shrink-0" style={{ color: SAGE }}>
+                              <CheckCircle2 size={12} strokeWidth={1.5} /> Reviewed
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setOpenReview(openReview === reviewKey ? null : reviewKey)}
+                              className="flex items-center gap-1 text-[11px] font-medium shrink-0"
+                              style={{ color: PEACH }}
+                            >
+                              <Star size={12} strokeWidth={1.5} /> Rate
+                            </button>
+                          )
+                        )}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm truncate text-neutral-900">{it.name}</p>
-                        <p className="text-xs text-neutral-400">Qty {it.qty}</p>
-                      </div>
-                      {canReview && (
-                        alreadyReviewed ? (
-                          <span className="flex items-center gap-1 text-[11px] text-green-600 shrink-0">
-                            <CheckCircle2 size={13} /> Reviewed
-                          </span>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => setOpenReview(openReview === reviewKey ? null : reviewKey)}
-                            className="flex items-center gap-1 text-[11px] font-semibold text-pink-600 shrink-0"
-                          >
-                            <Star size={13} /> Rate
-                          </button>
-                        )
+                      {openReview === reviewKey && (
+                        <ReviewForm
+                          order={o}
+                          item={it}
+                          phone={phone.replace(/\D/g, '').slice(-10)}
+                          onDone={() => markReviewed(o._id, it.product)}
+                        />
                       )}
                     </div>
-                    {openReview === reviewKey && (
-                      <ReviewForm
-                        order={o}
-                        item={it}
-                        phone={phone.replace(/\D/g, '').slice(-10)}
-                        onDone={() => markReviewed(o._id, it.product)}
-                      />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="flex items-center justify-between text-sm mb-1">
-              <span className="text-neutral-500">
-                {o.items.length} item{o.items.length > 1 ? 's' : ''}
-              </span>
-              <span className="font-semibold text-pink-600">{formatINR(o.total)}</span>
-            </div>
-
-            {o.courier?.trackingId && (
-              <div className="flex items-center gap-1.5 text-[11px] text-neutral-400 mt-1">
-                <Truck size={12} className="text-pink-500" />
-                {o.courier.partner} · {o.courier.trackingId}
+                  );
+                })}
               </div>
-            )}
 
-            <p className="text-[11px] text-neutral-300 mt-1.5">
-              {new Date(o.createdAt).toLocaleDateString('en-IN', {
-                day: 'numeric',
-                month: 'short',
-                year: 'numeric'
-              })}
-            </p>
-          </div>
-        ))}
+              <div className="flex items-center justify-between text-sm pt-3.5" style={{ borderTop: `1px solid ${LINE}` }}>
+                <span style={{ color: INK_SOFT }}>
+                  {o.items.length} item{o.items.length > 1 ? 's' : ''}
+                </span>
+                <span style={{ color: PEACH }}>{formatINR(o.total)}</span>
+              </div>
+
+              {o.courier?.trackingId && (
+                <div className="flex items-center gap-1.5 text-[11px] mt-2" style={{ color: INK_SOFT }}>
+                  <Truck size={11} strokeWidth={1.5} style={{ color: PEACH }} />
+                  {o.courier.partner} · {o.courier.trackingId}
+                </div>
+              )}
+
+              <p className="text-[11px] mt-1.5" style={{ color: INK_SOFT, opacity: 0.7 }}>
+                {new Date(o.createdAt).toLocaleDateString('en-IN', {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric'
+                })}
+              </p>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

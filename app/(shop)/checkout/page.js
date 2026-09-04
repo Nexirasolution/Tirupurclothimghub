@@ -7,11 +7,20 @@ import toast from 'react-hot-toast';
 import { useCart, cartKey } from '@/components/CartContext';
 import { formatINR } from '@/lib/utils';
 
-const inputClass =
-  'w-full border border-neutral-200 rounded-lg px-3 py-2.5 text-sm text-neutral-900 bg-white outline-none transition-colors focus:border-pink-400';
+const INK = '#241B21';
+const INK_SOFT = '#9C877D';
+const PEACH = '#D9946A';
+const PEACH_LIGHT = '#F7EDE4';
+const LINE = '#EEE3DA';
+const PAPER = '#FFFFFF';
+const SAGE = '#7C9473';
+const FONT_SERIF = "Georgia, 'Times New Roman', serif";
 
-const cardClass = 'bg-white rounded-xl border border-neutral-100 p-5';
-const sectionHeadClass = 'text-sm font-semibold text-neutral-900 mb-3';
+const inputClass =
+  'w-full text-sm outline-none transition-colors px-3.5 py-2.5';
+const inputStyle = { border: `1px solid ${LINE}`, borderRadius: '3px', color: INK, background: PAPER };
+
+const sectionHeadClass = 'text-[11px] font-medium uppercase tracking-[0.18em] mb-4';
 
 function SSRKInput({ placeholder, type = 'text', value, onChange, autoComplete, inputMode, maxLength }) {
   return (
@@ -24,6 +33,7 @@ function SSRKInput({ placeholder, type = 'text', value, onChange, autoComplete, 
       value={value}
       onChange={onChange}
       className={inputClass}
+      style={inputStyle}
     />
   );
 }
@@ -181,7 +191,7 @@ export default function CheckoutPage() {
           name: 'Mohith Trends',
           order_id: orderData.order.id,
           prefill: { name: form.name, contact: form.phone, email: form.email },
-          theme: { color: '#DB2777' },
+          theme: { color: '#D9946A' },
           handler: async function (response) {
             // Fast path — if this fails or never runs, the webhook creates
             // the same order server-side. /api/orders is idempotent on
@@ -245,24 +255,27 @@ export default function CheckoutPage() {
   const placeOrderDisabled = submitting || shippingLoading || checkingStock || shipping === null;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8">
+    <div className="max-w-4xl mx-auto px-5 sm:px-8 py-8 sm:py-14" style={{ background: PAPER }}>
       <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="afterInteractive" />
 
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">Checkout</h1>
-      </div>
+      <h1 className="text-[24px] sm:text-[28px] mb-7" style={{ fontFamily: FONT_SERIF, color: INK }}>
+        Checkout
+      </h1>
 
       {freeShippingAbove !== null && shipping !== null && shipping > 0 && (
-        <div className="flex items-center gap-2 px-4 py-2.5 mb-4 text-xs rounded-lg bg-pink-50 border border-pink-100 text-neutral-600">
-          Add <strong className="text-pink-600">{formatINR(freeShippingAbove - discountedSubtotal)}</strong> more to get{' '}
-          <strong className="text-green-600">free shipping!</strong>
+        <div
+          className="text-xs py-2.5 px-4 mb-6"
+          style={{ background: PEACH_LIGHT, color: INK_SOFT, borderRadius: '3px' }}
+        >
+          Add <strong style={{ color: PEACH }}>{formatINR(freeShippingAbove - discountedSubtotal)}</strong> more to get{' '}
+          <strong style={{ color: SAGE }}>free shipping</strong>
         </div>
       )}
 
-      <div className="flex flex-col gap-6 sm:grid sm:grid-cols-2 sm:gap-8">
+      <div className="flex flex-col gap-8 sm:grid sm:grid-cols-2 sm:gap-12">
 
-        <div className={cardClass}>
-          <p className={sectionHeadClass}>Shipping Details</p>
+        <div>
+          <p className={sectionHeadClass} style={{ color: INK }}>Shipping Details</p>
           <div className="space-y-3">
             <SSRKInput placeholder="Full Name *" autoComplete="name" value={form.name} onChange={(e) => update('name', e.target.value)} />
             <SSRKInput placeholder="Phone Number *" type="tel" inputMode="numeric" autoComplete="tel" value={form.phone} onChange={(e) => update('phone', e.target.value)} />
@@ -276,6 +289,7 @@ export default function CheckoutPage() {
                 value={form.city}
                 onChange={(e) => update('city', e.target.value)}
                 className={inputClass}
+                style={inputStyle}
               />
               <input
                 placeholder="State"
@@ -283,6 +297,7 @@ export default function CheckoutPage() {
                 value={form.state}
                 onChange={(e) => update('state', e.target.value)}
                 className={inputClass}
+                style={inputStyle}
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -294,89 +309,94 @@ export default function CheckoutPage() {
                 value={form.pincode}
                 onChange={(e) => update('pincode', e.target.value)}
                 className={inputClass}
+                style={inputStyle}
               />
               <input
                 placeholder="Landmark"
                 value={form.landmark}
                 onChange={(e) => update('landmark', e.target.value)}
                 className={inputClass}
+                style={inputStyle}
               />
             </div>
           </div>
         </div>
 
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-8">
 
-          <div className={cardClass}>
-            <p className={sectionHeadClass}>Order Summary</p>
+          <div>
+            <p className={sectionHeadClass} style={{ color: INK }}>Order Summary</p>
 
-            <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
+            <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
               {items.map((i, idx) => (
-                <div key={idx} className="flex justify-between text-sm py-1 gap-2 text-neutral-600">
+                <div key={idx} className="flex justify-between text-sm py-1 gap-2" style={{ color: INK_SOFT }}>
                   <span className="truncate">{i.name} ({i.color}/{i.size}) ×{i.qty}</span>
-                  <span className="shrink-0 font-medium text-neutral-900">{formatINR(i.price * i.qty)}</span>
+                  <span className="shrink-0" style={{ color: INK }}>{formatINR(i.price * i.qty)}</span>
                 </div>
               ))}
             </div>
 
-            <div className="flex gap-2 mt-3">
+            <div className="flex gap-2 mt-4">
               <input
                 placeholder="Coupon code"
                 value={coupon}
                 onChange={(e) => setCoupon(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && applyCoupon()}
                 className={`${inputClass} flex-1`}
+                style={inputStyle}
               />
               <button
                 onClick={applyCoupon}
-                className="px-4 text-sm font-medium shrink-0 rounded-lg border border-pink-600 text-pink-600 bg-white hover:bg-pink-600 hover:text-white transition-colors"
+                className="px-4 text-sm shrink-0 transition-colors"
+                style={{ border: `1px solid ${PEACH}`, color: PEACH, background: PAPER, borderRadius: '3px' }}
               >
                 Apply
               </button>
             </div>
 
-            <div className="h-px bg-neutral-100 my-4" />
+            <div style={{ height: '1px', background: LINE }} className="my-4" />
 
             <div className="space-y-1.5 text-sm">
-              <div className="flex justify-between text-neutral-600">
+              <div className="flex justify-between" style={{ color: INK_SOFT }}>
                 <span>Subtotal</span>
                 <span>{formatINR(subtotal)}</span>
               </div>
               {discount > 0 && (
-                <div className="flex justify-between text-green-600 font-medium">
+                <div className="flex justify-between" style={{ color: SAGE }}>
                   <span>Discount</span>
                   <span>−{formatINR(discount)}</span>
                 </div>
               )}
-              <div className="flex justify-between text-neutral-600">
+              <div className="flex justify-between" style={{ color: INK_SOFT }}>
                 <span>Shipping</span>
                 <span>
                   {shippingLoading
-                    ? <span className="text-neutral-400">Calculating…</span>
+                    ? <span style={{ color: INK_SOFT, opacity: 0.6 }}>Calculating…</span>
                     : shipping === 0
-                      ? <span className="text-green-600 font-medium">Free</span>
+                      ? <span style={{ color: SAGE }}>Free</span>
                       : shipping !== null
                         ? formatINR(shipping)
-                        : <span className="text-neutral-400">—</span>
+                        : <span style={{ color: INK_SOFT, opacity: 0.6 }}>—</span>
                   }
                 </span>
               </div>
             </div>
 
-            <div className="flex justify-between font-semibold mt-3 pt-3 border-t border-neutral-100 text-base">
-              <span className="text-neutral-900">Total</span>
-              <span className="text-pink-600">{total !== null ? formatINR(total) : '—'}</span>
+            <div className="flex justify-between mt-3 pt-3 text-base" style={{ borderTop: `1px solid ${LINE}` }}>
+              <span style={{ color: INK }}>Total</span>
+              <span style={{ color: PEACH, fontFamily: FONT_SERIF }}>{total !== null ? formatINR(total) : '—'}</span>
             </div>
           </div>
 
-          <div className={cardClass}>
-            <p className={sectionHeadClass}>Payment Method</p>
-            <label className="flex items-center gap-3 text-sm cursor-pointer text-neutral-700">
+          <div>
+            <p className={sectionHeadClass} style={{ color: INK }}>Payment Method</p>
+            <label className="flex items-center gap-3 text-sm cursor-pointer" style={{ color: INK }}>
               <input
                 type="radio"
                 checked={paymentMethod === 'razorpay'}
                 onChange={() => setPaymentMethod('razorpay')}
-                className="w-4 h-4 accent-pink-600"
+                className="w-4 h-4"
+                style={{ accentColor: PEACH }}
               />
               Pay Online (Cards / UPI / Netbanking)
             </label>
@@ -385,11 +405,12 @@ export default function CheckoutPage() {
           <button
             onClick={placeOrder}
             disabled={placeOrderDisabled}
-            className={`w-full py-3 font-medium text-sm sm:text-base rounded-full transition-colors ${
-              placeOrderDisabled
-                ? 'bg-pink-300 text-white cursor-not-allowed'
-                : 'bg-pink-600 text-white hover:bg-pink-700'
-            }`}
+            className="w-full py-3.5 text-sm font-medium transition-opacity active:opacity-80 disabled:cursor-not-allowed"
+            style={{
+              background: placeOrderDisabled ? '#E9C7AC' : PEACH,
+              color: PAPER,
+              borderRadius: '4px',
+            }}
           >
             {submitting
               ? (checkingStock ? 'Checking stock…' : 'Placing Order…')

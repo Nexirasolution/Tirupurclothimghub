@@ -6,18 +6,27 @@ import { useCart, cartKey } from '@/components/CartContext';
 import { formatINR } from '@/lib/utils';
 import { Trash2, ShoppingBag } from 'lucide-react';
 
+const INK = '#241B21';
+const INK_SOFT = '#9C877D';
+const PEACH = '#D9946A';
+const PEACH_WASH = '#FBE8D9';
+const LINE = '#EEE3DA';
+const PAPER = '#FFFFFF';
+const FONT_SERIF = "Georgia, 'Times New Roman', serif";
+
 export default function CartPage() {
   const { items, updateQty, removeItem, subtotal } = useCart();
 
   if (items.length === 0) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-20 text-center">
-        <ShoppingBag size={44} className="mx-auto mb-4 text-pink-300" />
-        <p className="mb-1 text-lg font-semibold text-neutral-900">Your cart is empty</p>
-        <p className="mb-6 text-sm text-neutral-400">Add something beautiful from our collection!</p>
+      <div className="max-w-md mx-auto px-5 py-24 text-center" style={{ background: PAPER }}>
+        <ShoppingBag size={28} strokeWidth={1.5} className="mx-auto mb-4" style={{ color: PEACH, opacity: 0.5 }} />
+        <p className="text-[15px] mb-1" style={{ color: INK, fontFamily: FONT_SERIF }}>Your cart is empty</p>
+        <p className="text-sm mb-7" style={{ color: INK_SOFT }}>Add something beautiful from our collection.</p>
         <Link
           href="/"
-          className="inline-block px-8 py-3 font-medium text-sm rounded-full bg-pink-600 text-white hover:bg-pink-700 transition-colors"
+          className="inline-block px-6 py-3 text-sm font-medium transition-opacity active:opacity-80"
+          style={{ background: PEACH, color: PAPER, borderRadius: '4px' }}
         >
           Continue Shopping
         </Link>
@@ -26,49 +35,50 @@ export default function CartPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      {/* Page heading */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">Your Cart</h1>
-      </div>
+    <div className="max-w-3xl mx-auto px-5 sm:px-8 py-10 sm:py-14" style={{ background: PAPER }}>
+      <h1 className="text-[24px] sm:text-[28px] mb-8" style={{ fontFamily: FONT_SERIF, color: INK }}>
+        Your Cart
+      </h1>
 
-      {/* Cart items */}
-      <div className="space-y-4">
-        {items.map((item) => {
+      <div className="space-y-0">
+        {items.map((item, idx) => {
           const key = cartKey(item);
           return (
             <div
               key={key}
-              className="flex gap-4 p-4 bg-white border border-neutral-100 rounded-xl"
+              className="flex gap-4 py-5"
+              style={{ borderTop: idx === 0 ? `1px solid ${LINE}` : 'none', borderBottom: `1px solid ${LINE}` }}
             >
               {/* Product image */}
-              <div className="relative shrink-0 w-20 h-24 rounded-lg overflow-hidden bg-pink-50 border border-neutral-100">
+              <div className="relative shrink-0 w-16 h-20 sm:w-20 sm:h-24 overflow-hidden" style={{ background: PEACH_WASH, borderRadius: '3px' }}>
                 <Image src={item.image || '/placeholder.png'} alt={item.name} fill className="object-cover" />
               </div>
 
               {/* Product info */}
               <div className="flex-1 min-w-0">
-                <p className="font-medium line-clamp-1 text-sm text-neutral-900">{item.name}</p>
-                <p className="text-xs mt-0.5 text-neutral-400">
-                  Color: {item.color} &nbsp;|&nbsp; Size: {item.size}
+                <p className="text-sm line-clamp-1" style={{ color: INK }}>{item.name}</p>
+                <p className="text-xs mt-1" style={{ color: INK_SOFT }}>
+                  Color: {item.color} &nbsp;·&nbsp; Size: {item.size}
                 </p>
-                <p className="font-semibold mt-1 text-sm text-pink-600">{formatINR(item.price)}</p>
+                <p className="text-sm mt-1.5" style={{ color: PEACH }}>{formatINR(item.price)}</p>
 
                 {/* Qty controls + remove */}
-                <div className="flex items-center gap-3 mt-2">
-                  <div className="flex items-center border border-neutral-200 rounded-md overflow-hidden">
+                <div className="flex items-center gap-4 mt-3">
+                  <div className="flex items-center" style={{ border: `1px solid ${LINE}`, borderRadius: '3px' }}>
                     <button
                       onClick={() => updateQty(key, item.qty - 1)}
-                      className="px-2.5 py-1 text-sm font-semibold text-neutral-700 bg-white hover:bg-pink-50 transition-colors"
+                      className="px-2.5 py-1 text-sm transition-opacity active:opacity-60"
+                      style={{ color: INK }}
                     >
                       −
                     </button>
-                    <span className="px-3 py-1 text-sm font-medium text-neutral-900 border-x border-neutral-200">
+                    <span className="px-3 py-1 text-sm" style={{ color: INK, borderLeft: `1px solid ${LINE}`, borderRight: `1px solid ${LINE}` }}>
                       {item.qty}
                     </span>
                     <button
                       onClick={() => updateQty(key, item.qty + 1)}
-                      className="px-2.5 py-1 text-sm font-semibold text-neutral-700 bg-white hover:bg-pink-50 transition-colors"
+                      className="px-2.5 py-1 text-sm transition-opacity active:opacity-60"
+                      style={{ color: INK }}
                     >
                       +
                     </button>
@@ -76,16 +86,17 @@ export default function CartPage() {
 
                   <button
                     onClick={() => removeItem(key)}
-                    className="text-neutral-300 hover:text-pink-600 transition-colors"
+                    className="transition-opacity active:opacity-60"
+                    style={{ color: INK_SOFT }}
                     aria-label="Remove item"
                   >
-                    <Trash2 size={17} />
+                    <Trash2 size={15} strokeWidth={1.5} />
                   </button>
                 </div>
               </div>
 
               {/* Line total */}
-              <p className="font-semibold shrink-0 self-start pt-1 text-sm text-neutral-900">
+              <p className="text-sm shrink-0 self-start pt-0.5" style={{ color: INK }}>
                 {formatINR(item.price * item.qty)}
               </p>
             </div>
@@ -94,15 +105,16 @@ export default function CartPage() {
       </div>
 
       {/* Subtotal card */}
-      <div className="flex items-center justify-between p-5 mt-6 bg-white border border-neutral-100 rounded-xl">
-        <span className="text-sm text-neutral-500">Subtotal</span>
-        <span className="font-semibold text-xl text-neutral-900">{formatINR(subtotal)}</span>
+      <div className="flex items-center justify-between pt-6 mt-2">
+        <span className="text-sm" style={{ color: INK_SOFT }}>Subtotal</span>
+        <span className="text-lg" style={{ color: INK, fontFamily: FONT_SERIF }}>{formatINR(subtotal)}</span>
       </div>
 
       {/* Checkout CTA */}
       <Link
         href="/checkout"
-        className="block w-full text-center mt-4 py-3 font-medium text-sm rounded-full bg-pink-600 text-white hover:bg-pink-700 transition-colors"
+        className="block w-full text-center mt-6 py-3.5 text-sm font-medium transition-opacity active:opacity-80"
+        style={{ background: PEACH, color: PAPER, borderRadius: '4px' }}
       >
         Proceed to Checkout
       </Link>
