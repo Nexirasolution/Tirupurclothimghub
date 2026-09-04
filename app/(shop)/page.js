@@ -56,6 +56,32 @@ export default async function HomePage() {
       {/* Banner */}
       <BannerCarousel banners={JSON.parse(JSON.stringify(banners))} />
 
+      {/* Intro copy — minimalist, centered */}
+      <section className="max-w-3xl mx-auto px-4 pt-16 pb-2 text-center">
+        <h2
+          className="text-xl sm:text-2xl font-bold tracking-[3px] uppercase"
+          style={{ color: COFFEE, fontFamily: FONT_SANS }}
+        >
+          Crafted for the Trendsetters of Today
+        </h2>
+
+        <p
+          className="mt-5 text-sm sm:text-base leading-relaxed font-light"
+          style={{ color: COFFEE_FAINT, fontFamily: FONT_SANS }}
+        >
+          Experience the perfect blend of comfort, quality, and timeless fashion.
+          Sourced directly from India&rsquo;s textile capital, our collections offer
+          high-end craftsmanship at prices that fit your daily lifestyle.
+        </p>
+
+        <p
+          className="mt-4 text-sm sm:text-base tracking-[1px] italic font-light"
+          style={{ color: COFFEE, fontFamily: FONT_SANS }}
+        >
+          Wrap yourself in beauty every time you step out.
+        </p>
+      </section>
+
       {/* Shop by Category */}
       {plainCategories?.length > 0 && (
         <section className="max-w-6xl mx-auto px-4 pt-14 pb-6">
