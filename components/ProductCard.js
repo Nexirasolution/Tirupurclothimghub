@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { MoreVertical } from 'lucide-react';
+import { MoreVertical, Heart } from 'lucide-react';
 import { formatINR } from '@/lib/utils';
 import { getVariantTotalStock } from '@/lib/stock';
+import { useWishlist } from '@/components/WhishlistContext'; // adjust path as needed
 
 const COFFEE = '#3E2B22';
 const COFFEE_FAINT = '#7A6A5E';
@@ -23,6 +24,15 @@ export default function ProductCard({ product }) {
   const totalStock = getVariantTotalStock(variant);
   const outOfStock = totalStock <= 0;
   const lowStock = !outOfStock && totalStock <= 5;
+
+  const { isWishlisted, toggleWishlist } = useWishlist();
+  const wishlisted = isWishlisted(product.id ?? product._id ?? product.slug);
+
+  const handleWishlistClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleWishlist(product.id ?? product._id ?? product.slug);
+  };
 
   return (
     <div style={{ background: PAPER, fontFamily: FONT_SANS }}>
@@ -60,6 +70,22 @@ export default function ProductCard({ product }) {
               </span>
             ) : null}
           </div>
+
+          <button
+            type="button"
+            onClick={handleWishlistClick}
+            aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+            aria-pressed={wishlisted}
+            className="absolute top-4 right-4 flex items-center justify-center w-8 h-8 rounded-full transition-transform active:scale-90"
+            style={{ background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(2px)' }}
+          >
+            <Heart
+              className="w-4 h-4"
+              strokeWidth={2}
+              style={{ color: wishlisted ? '#DB2777' : COFFEE }}
+              fill={wishlisted ? '#DB2777' : 'none'}
+            />
+          </button>
 
           <span
             className="absolute bottom-3.5 right-3.5 flex items-center justify-center w-8 h-8"
