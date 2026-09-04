@@ -27,7 +27,7 @@ export default async function InvoicePage({ params }) {
       <div className="flex justify-between items-start pb-5 mb-6" style={{ borderBottom: `1px solid ${LINE}` }}>
         <div>
           <h1 className="text-[22px]" style={{ fontFamily: FONT_SERIF, color: INK }}>
-            {settings?.storeName || 'Mohith Trends'}
+            {settings?.storeName || 'Tirupur Clothing Hub'}
           </h1>
           <p className="text-sm mt-1" style={{ color: INK_SOFT }}>{settings?.address || 'Tamil Nadu'}</p>
           <p className="text-sm" style={{ color: INK_SOFT }}>WhatsApp: +{settings?.whatsapp}</p>
@@ -98,7 +98,7 @@ export default async function InvoicePage({ params }) {
       </div>
 
       <p className="text-center text-xs mt-12" style={{ color: INK_SOFT }}>
-        Thank you for shopping with {settings?.storeName || 'Mohith Trends'}
+        Thank you for shopping with {settings?.storeName || 'Tirupur Clothing Hub'}
       </p>
 
       <div className="mt-6">

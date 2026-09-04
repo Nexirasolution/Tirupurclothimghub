@@ -336,7 +336,7 @@ export default function CheckoutPage() {
               ))}
             </div>
 
-            <div className="flex gap-2 mt-4">
+            {/* <div className="flex gap-2 mt-4">
               <input
                 placeholder="Coupon code"
                 value={coupon}
@@ -352,7 +352,7 @@ export default function CheckoutPage() {
               >
                 Apply
               </button>
-            </div>
+            </div> */}
 
             <div style={{ height: '1px', background: LINE }} className="my-4" />
 

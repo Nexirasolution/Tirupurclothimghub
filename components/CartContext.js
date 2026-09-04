@@ -6,11 +6,12 @@ import toast from 'react-hot-toast';
 const CartContext = createContext(null);
 const STORAGE_KEY = 'lb_cart_v1';
 
-// ── Brand tokens ──────────────────────────────────────────
-const PINK  = '#DB2777';
-const PINK_LIGHT = '#F9A8D4';
-const GREEN = '#16A34A';
-const RED   = '#DC2626';
+// ── Brand tokens — peach / coffee minimalist theme ──────────
+const PEACH       = '#D9946A';
+const PEACH_LIGHT = '#F7EDE4';
+const SAGE        = '#7C9473';
+const RUST        = '#B0503A';
+const INK         = '#241B21';
 
 const toastBase = {
   duration: 2500,
@@ -18,12 +19,12 @@ const toastBase = {
     fontFamily: 'inherit',
     fontSize: '13px',
     fontWeight: 600,
-    color: '#171717',
+    color: INK,
     background: '#FFFFFF',
-    borderRadius: '10px',
+    borderRadius: '4px',
     padding: '10px 14px',
-    boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
-    borderLeft: `3px solid ${PINK}`,
+    boxShadow: '0 2px 12px rgba(36,27,33,0.08)',
+    borderLeft: `3px solid ${PEACH}`,
   },
 };
 
@@ -32,8 +33,8 @@ function brandToast(message, opts = {}) {
     (t) => (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
         <span>{message}</span>
-        <span style={{ fontSize: 9, color: PINK, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>
-          Mohith Trends
+        <span style={{ fontSize: 9, color: PEACH, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>
+         Tirupur Clothing Hub
         </span>
       </div>
     ),
@@ -103,7 +104,7 @@ export function CartProvider({ children }) {
     if (blocked) {
       brandToast('Sorry, this item is out of stock', {
         icon: '⚠️',
-        style: { ...toastBase.style, borderLeftColor: RED },
+        style: { ...toastBase.style, borderLeftColor: RUST },
       });
       return;
     }
@@ -111,14 +112,14 @@ export function CartProvider({ children }) {
     if (clamped) {
       brandToast('Only limited stock available — quantity adjusted', {
         icon: '⚠️',
-        style: { ...toastBase.style, borderLeftColor: PINK_LIGHT },
+        style: { ...toastBase.style, borderLeftColor: PEACH_LIGHT },
       });
       return;
     }
 
     brandToast('Added to cart', {
       icon: '✓',
-      style: { ...toastBase.style, borderLeftColor: PINK },
+      style: { ...toastBase.style, borderLeftColor: PEACH },
     });
   }, []);
 
@@ -173,7 +174,7 @@ export function CartProvider({ children }) {
     if (addedCount === 0 && blockedCount > 0) {
       brandToast('Sorry, those items are out of stock', {
         icon: '⚠️',
-        style: { ...toastBase.style, borderLeftColor: RED },
+        style: { ...toastBase.style, borderLeftColor: RUST },
       });
       return;
     }
@@ -181,14 +182,14 @@ export function CartProvider({ children }) {
     if (clampedCount > 0 || blockedCount > 0) {
       brandToast('Added to cart — some quantities were limited by stock', {
         icon: '⚠️',
-        style: { ...toastBase.style, borderLeftColor: PINK_LIGHT },
+        style: { ...toastBase.style, borderLeftColor: PEACH_LIGHT },
       });
       return;
     }
 
     brandToast('Added to cart', {
       icon: '✓',
-      style: { ...toastBase.style, borderLeftColor: PINK },
+      style: { ...toastBase.style, borderLeftColor: PEACH },
     });
   }, []);
 
@@ -201,7 +202,7 @@ export function CartProvider({ children }) {
         if (qty > max) {
           brandToast(`Only ${max} left in stock`, {
             icon: '⚠️',
-            style: { ...toastBase.style, borderLeftColor: PINK_LIGHT },
+            style: { ...toastBase.style, borderLeftColor: PEACH_LIGHT },
           });
         }
         return { ...i, qty: nextQty };
@@ -213,7 +214,7 @@ export function CartProvider({ children }) {
     setItems((prev) => prev.filter((i) => cartKey(i) !== key));
     brandToast('Removed from cart', {
       icon: '🗑️',
-      style: { ...toastBase.style, borderLeftColor: PINK_LIGHT },
+      style: { ...toastBase.style, borderLeftColor: PEACH_LIGHT },
     });
   }, []);
 
@@ -231,7 +232,7 @@ export function CartProvider({ children }) {
     setItems([]);
     brandToast('Cart cleared', {
       icon: '✕',
-      style: { ...toastBase.style, borderLeftColor: GREEN },
+      style: { ...toastBase.style, borderLeftColor: SAGE },
     });
   }, []);
 
