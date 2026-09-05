@@ -5,7 +5,7 @@ import { useCart } from './CartContext';
 import { useRouter } from 'next/navigation';
 import { formatINR } from '@/lib/utils';
 import ComboImageGallery from './ComboImageGallery';
-import { ShoppingBag, Zap, Ruler, X, Minus, Plus, PackageCheck, AlertCircle } from 'lucide-react';
+import { ShoppingBag, Zap, Ruler, Minus, Plus, PackageCheck, AlertCircle, ChevronDown } from 'lucide-react';
 
 const INK = '#241B21';
 const INK_SOFT = '#9C877D';
@@ -157,6 +157,8 @@ export default function ColorPackSelector({ combo }) {
     ? `Pick ${remaining} more color${remaining === 1 ? '' : 's'} to continue`
     : '';
 
+  const sizeChartRows = combo.sizeChart?.length ? combo.sizeChart : GENERIC_SIZE_CHART;
+
   return (
     <div className="grid sm:grid-cols-2 gap-6 sm:gap-10">
       {/* Gallery */}
@@ -215,16 +217,7 @@ export default function ColorPackSelector({ combo }) {
 
         {/* Size */}
         <div className="mt-6">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm" style={{ color: INK }}>Select size</h3>
-            <button
-              onClick={() => setShowSizeChart(true)}
-              className="flex items-center gap-1 text-xs"
-              style={{ color: PEACH }}
-            >
-              <Ruler size={13} strokeWidth={1.75} /> Size chart
-            </button>
-          </div>
+          <h3 className="text-sm mb-3" style={{ color: INK }}>Select size</h3>
           {allSizes.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {allSizes.map((size) => {
@@ -248,6 +241,52 @@ export default function ColorPackSelector({ combo }) {
             </div>
           ) : (
             <p className="text-xs" style={{ color: INK_SOFT }}>No sizes available for this combo yet.</p>
+          )}
+
+          {/* Size chart trigger — sits below the size buttons themselves */}
+          <button
+            onClick={() => setShowSizeChart((v) => !v)}
+            className="flex items-center gap-1 text-xs mt-3"
+            style={{ color: PEACH }}
+          >
+            <Ruler size={13} strokeWidth={1.75} /> Size chart
+            <ChevronDown
+              size={12}
+              strokeWidth={2}
+              style={{
+                transform: showSizeChart ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 150ms ease',
+              }}
+            />
+          </button>
+
+          {/* Inline size chart — expands directly below the trigger instead
+              of a popup modal, so it reads in context with the size the
+              shopper is picking. */}
+          {showSizeChart && (
+            <div className="mt-4 p-4" style={{ border: `1px solid ${LINE}`, borderRadius: '2px', background: PEACH_LIGHT }}>
+              <p className="text-xs mb-3" style={{ color: INK_SOFT }}>All measurements in inches.</p>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs" style={{ color: INK_SOFT, borderBottom: `1px solid ${LINE}` }}>
+                    <th className="py-2 font-normal">Size</th>
+                    <th className="py-2 font-normal">Chest</th>
+                    <th className="py-2 font-normal">Waist</th>
+                    <th className="py-2 font-normal">Length</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sizeChartRows.map((row) => (
+                    <tr key={row.size} style={{ borderBottom: `1px solid ${LINE}` }}>
+                      <td className="py-2" style={{ color: INK }}>{row.size}</td>
+                      <td className="py-2" style={{ color: INK_SOFT }}>{row.chest}</td>
+                      <td className="py-2" style={{ color: INK_SOFT }}>{row.waist}</td>
+                      <td className="py-2" style={{ color: INK_SOFT }}>{row.length}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
 
@@ -437,39 +476,6 @@ export default function ColorPackSelector({ combo }) {
           </button>
         </div>
       </div>
-
-      {/* Size chart modal — centered on all breakpoints, scrolls internally if it ever exceeds viewport height */}
-      {showSizeChart && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-          <div className="w-full max-w-md p-5 relative max-h-[85vh] overflow-y-auto" style={{ background: PAPER, borderRadius: '2px' }}>
-            <button onClick={() => setShowSizeChart(false)} className="absolute top-4 right-4" style={{ color: INK_SOFT }} aria-label="Close">
-              <X size={18} strokeWidth={1.75} />
-            </button>
-            <h3 className="text-base mb-1" style={{ color: INK, fontFamily: FONT_SERIF }}>Size chart</h3>
-            <p className="text-xs mb-4" style={{ color: INK_SOFT }}>All measurements in inches.</p>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-xs" style={{ color: INK_SOFT, borderBottom: `1px solid ${LINE}` }}>
-                  <th className="py-2 font-normal">Size</th>
-                  <th className="py-2 font-normal">Chest</th>
-                  <th className="py-2 font-normal">Waist</th>
-                  <th className="py-2 font-normal">Length</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(combo.sizeChart?.length ? combo.sizeChart : GENERIC_SIZE_CHART).map((row) => (
-                  <tr key={row.size} style={{ borderBottom: `1px solid ${LINE}` }}>
-                    <td className="py-2" style={{ color: INK }}>{row.size}</td>
-                    <td className="py-2" style={{ color: INK_SOFT }}>{row.chest}</td>
-                    <td className="py-2" style={{ color: INK_SOFT }}>{row.waist}</td>
-                    <td className="py-2" style={{ color: INK_SOFT }}>{row.length}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

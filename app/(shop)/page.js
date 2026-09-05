@@ -61,12 +61,12 @@ export default async function HomePage() {
 
       {/* Intro / hero copy — premium editorial opener */}
       <section className="max-w-2xl mx-auto px-6 pt-16 sm:pt-24 pb-10 sm:pb-14 text-center">
-        <span
+        {/* <span
           className="inline-block text-[10px] sm:text-[11px] font-semibold uppercase tracking-[4px]"
           style={{ color: COFFEE_FAINT, fontFamily: FONT_SANS }}
         >
           The Mohith Trends Edit
-        </span>
+        </span> */}
 
         <h1
           className="mt-5 text-[26px] sm:text-[38px] leading-[1.2]"
