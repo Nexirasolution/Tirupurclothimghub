@@ -22,12 +22,17 @@ const SHOP_GROUPS = [
 ];
 
 export default function Navbar() {
+  // Main categories only, each carrying its own `subcategories` array
+  // (as returned by /api/categories' `topLevel` field), so the Shop menu
+  // can nest subcategories under their parent instead of listing every
+  // category flat.
   const [categories, setCategories] = useState([]);
   const [query, setQuery] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const [shopOpen, setShopOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileGroupOpen, setMobileGroupOpen] = useState(null);
+  const [mobileCatOpen, setMobileCatOpen] = useState(null); // `${groupKey}:${categoryId}` of the expanded subcategory list
 
   const closeTimer = useRef(null);
 
@@ -39,7 +44,7 @@ export default function Navbar() {
   useEffect(() => {
     fetch('/api/categories')
       .then((r) => r.json())
-      .then((d) => setCategories(d.categories || []))
+      .then((d) => setCategories(d.topLevel || []))
       .catch(() => {});
   }, []);
 
@@ -86,6 +91,7 @@ export default function Navbar() {
   function closeMobileMenu() {
     setMenuOpen(false);
     setMobileGroupOpen(null);
+    setMobileCatOpen(null);
   }
 
   return (
@@ -127,7 +133,7 @@ export default function Navbar() {
                     <div className="absolute left-0 top-full pt-5" style={{ width: '620px' }}>
                       <div
                         style={{ background: PAPER, borderTop: `1px solid ${COFFEE}` }}
-                        className="py-6 px-6 grid grid-cols-3 gap-8"
+                        className="py-6 px-6 grid grid-cols-3 gap-8 max-h-[70vh] overflow-y-auto"
                       >
                         {SHOP_GROUPS.map((group) => (
                           <div key={group.key}>
@@ -137,19 +143,38 @@ export default function Navbar() {
                             >
                               {group.label}
                             </div>
-                            <div className="flex flex-col gap-1">
+                            <div className="flex flex-col gap-2.5">
                               {categories.map((c) => (
-                                <Link
-                                  key={c._id}
-                                  href={categoryHref(c.slug, group.qs)}
-                                  onClick={() => setShopOpen(false)}
-                                  className="py-1.5 text-[13px] tracking-wide transition-colors"
-                                  style={{ color: COFFEE_FAINT }}
-                                  onMouseEnter={(e) => (e.currentTarget.style.color = COFFEE)}
-                                  onMouseLeave={(e) => (e.currentTarget.style.color = COFFEE_FAINT)}
-                                >
-                                  {c.name}
-                                </Link>
+                                <div key={c._id}>
+                                  <Link
+                                    href={categoryHref(c.slug, group.qs)}
+                                    onClick={() => setShopOpen(false)}
+                                    className="py-0.5 text-[13px] font-medium tracking-wide transition-colors block"
+                                    style={{ color: COFFEE }}
+                                    onMouseEnter={(e) => (e.currentTarget.style.color = PEACH)}
+                                    onMouseLeave={(e) => (e.currentTarget.style.color = COFFEE)}
+                                  >
+                                    {c.name}
+                                  </Link>
+
+                                  {c.subcategories?.length > 0 && (
+                                    <div className="flex flex-col mt-1 pl-3" style={{ borderLeft: `1px solid ${HAIRLINE}` }}>
+                                      {c.subcategories.map((sub) => (
+                                        <Link
+                                          key={sub._id}
+                                          href={categoryHref(sub.slug, group.qs)}
+                                          onClick={() => setShopOpen(false)}
+                                          className="py-1 text-[12px] tracking-wide transition-colors"
+                                          style={{ color: COFFEE_FAINT }}
+                                          onMouseEnter={(e) => (e.currentTarget.style.color = COFFEE)}
+                                          onMouseLeave={(e) => (e.currentTarget.style.color = COFFEE_FAINT)}
+                                        >
+                                          {sub.name}
+                                        </Link>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
                               ))}
                             </div>
                           </div>
@@ -306,17 +331,58 @@ export default function Navbar() {
 
                 {mobileGroupOpen === group.key && (
                   <div className="flex flex-col pb-3">
-                    {categories.map((c) => (
-                      <Link
-                        key={c._id}
-                        href={categoryHref(c.slug, group.qs)}
-                        onClick={closeMobileMenu}
-                        className="py-2.5 pl-6 text-[13px] tracking-wide"
-                        style={{ color: COFFEE_FAINT }}
-                      >
-                        {c.name}
-                      </Link>
-                    ))}
+                    {categories.map((c) => {
+                      const catKey = `${group.key}:${c._id}`;
+                      const hasSubs = c.subcategories?.length > 0;
+                      const isCatOpen = mobileCatOpen === catKey;
+                      return (
+                        <div key={c._id} className="flex flex-col">
+                          <div className="flex items-center">
+                            <Link
+                              href={categoryHref(c.slug, group.qs)}
+                              onClick={closeMobileMenu}
+                              className="flex-1 py-2.5 pl-6 text-[13px] tracking-wide"
+                              style={{ color: COFFEE_FAINT }}
+                            >
+                              {c.name}
+                            </Link>
+                            {hasSubs && (
+                              <button
+                                onClick={() => setMobileCatOpen((v) => (v === catKey ? null : catKey))}
+                                className="px-3 py-2.5"
+                                aria-label={`Toggle ${c.name} subcategories`}
+                              >
+                                <ChevronDown
+                                  size={12}
+                                  strokeWidth={1.5}
+                                  style={{
+                                    color: COFFEE_FAINT,
+                                    transform: isCatOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                                    transition: 'transform 150ms ease',
+                                  }}
+                                />
+                              </button>
+                            )}
+                          </div>
+
+                          {hasSubs && isCatOpen && (
+                            <div className="flex flex-col pb-1.5">
+                              {c.subcategories.map((sub) => (
+                                <Link
+                                  key={sub._id}
+                                  href={categoryHref(sub.slug, group.qs)}
+                                  onClick={closeMobileMenu}
+                                  className="py-2 pl-10 text-[12.5px] tracking-wide"
+                                  style={{ color: COFFEE_FAINT }}
+                                >
+                                  {sub.name}
+                                </Link>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
