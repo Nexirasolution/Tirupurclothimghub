@@ -2,14 +2,64 @@
 
 import { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Plus, Trash2, Pencil, X, Upload, Loader2, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Trash2, Pencil, X, Upload, Loader2, ArrowUp, ArrowDown, CornerDownRight } from 'lucide-react';
 
-const emptyForm = { name: '', slug: '', image: '', description: '', sizes: '', sortOrder: 0, sizeChart: [] };
+const emptyForm = { name: '', slug: '', image: '', description: '', sizes: '', sortOrder: 0, sizeChart: [], parent: '' };
 
 function normalizeSizeChart(value) {
   if (Array.isArray(value)) return value;
   if (value) return [value]; // backward-compat with the old single-string field
   return [];
+}
+
+function parentIdOf(c) {
+  if (!c.parent) return null;
+  return typeof c.parent === 'object' ? c.parent._id : c.parent;
+}
+
+// A single row in the category list — used for both top-level categories
+// and their subcategories (indented, with a corner-arrow icon).
+function CategoryRow({ category, indent, onMoveUp, onMoveDown, disableUp, disableDown, onEdit, onDelete, onAddSub }) {
+  return (
+    <div className={`card-soft p-4 flex items-center gap-3 ${indent ? 'ml-8' : ''}`}>
+      <div className="flex flex-col">
+        <button
+          onClick={onMoveUp}
+          disabled={disableUp}
+          className="p-0.5 text-brand-ink/40 hover:text-brand-magenta disabled:opacity-20 disabled:hover:text-brand-ink/40"
+        >
+          <ArrowUp size={14} />
+        </button>
+        <button
+          onClick={onMoveDown}
+          disabled={disableDown}
+          className="p-0.5 text-brand-ink/40 hover:text-brand-magenta disabled:opacity-20 disabled:hover:text-brand-ink/40"
+        >
+          <ArrowDown size={14} />
+        </button>
+      </div>
+
+      {indent && <CornerDownRight size={16} className="text-brand-ink/25 shrink-0" />}
+
+      <div className="w-12 h-12 rounded-full bg-brand-cream overflow-hidden shrink-0">
+        {category.image && <img src={category.image} alt={category.name} className="w-full h-full object-cover" />}
+      </div>
+      <div className="flex-1">
+        <p className="font-medium">{category.name}</p>
+        <p className="text-xs text-brand-ink/50">
+          /{category.slug} · order: {category.sortOrder ?? 0}
+          {category.sizeChart?.length ? ` · ${category.sizeChart.length} size chart image${category.sizeChart.length > 1 ? 's' : ''}` : ''}
+        </p>
+      </div>
+      {onAddSub && (
+        <button onClick={onAddSub} className="text-brand-magenta p-1" title="Add subcategory">
+          <Plus size={16} />
+        </button>
+      )}
+      <button onClick={onEdit} className="text-brand-magenta p-1"><Pencil size={16} /></button>
+      <button onClick={onDelete} className="text-brand-magenta p-1"><Trash2 size={16} /></button>
+    </div>
+  );
 }
 
 export default function AdminCategoriesPage() {
@@ -31,6 +81,9 @@ export default function AdminCategoriesPage() {
   }
   useEffect(() => { load(); }, []);
 
+  const topLevel = categories.filter((c) => !parentIdOf(c));
+  const childrenOf = (id) => categories.filter((c) => parentIdOf(c) === id);
+
   function startEdit(c) {
     setEditingId(c._id);
     setForm({
@@ -40,7 +93,8 @@ export default function AdminCategoriesPage() {
       description: c.description || '',
       sizes: (c.sizes || []).join(', '),
       sortOrder: c.sortOrder ?? 0,
-      sizeChart: normalizeSizeChart(c.sizeChart)
+      sizeChart: normalizeSizeChart(c.sizeChart),
+      parent: parentIdOf(c) || ''
     });
     setPreview(c.image || '');
     setShowForm(true);
@@ -48,9 +102,18 @@ export default function AdminCategoriesPage() {
 
   function startNew() {
     setEditingId(null);
-    // default new category to the end of the current order
-    const maxOrder = categories.reduce((max, c) => Math.max(max, c.sortOrder ?? 0), 0);
+    // default new top-level category to the end of the current top-level order
+    const maxOrder = topLevel.reduce((max, c) => Math.max(max, c.sortOrder ?? 0), 0);
     setForm({ ...emptyForm, sortOrder: maxOrder + 1 });
+    setPreview('');
+    setShowForm(true);
+  }
+
+  function startNewSub(parentId) {
+    setEditingId(null);
+    const siblings = childrenOf(parentId);
+    const maxOrder = siblings.reduce((max, c) => Math.max(max, c.sortOrder ?? 0), 0);
+    setForm({ ...emptyForm, parent: parentId, sortOrder: maxOrder + 1 });
     setPreview('');
     setShowForm(true);
   }
@@ -119,7 +182,8 @@ export default function AdminCategoriesPage() {
       ...form,
       sizes: form.sizes.split(',').map((s) => s.trim()).filter(Boolean),
       sortOrder: Number(form.sortOrder) || 0,
-      sizeChart: form.sizeChart || []
+      sizeChart: form.sizeChart || [],
+      parent: form.parent || null
     };
     const url = editingId ? `/api/categories/${editingId}` : '/api/categories';
     const method = editingId ? 'PUT' : 'POST';
@@ -134,18 +198,24 @@ export default function AdminCategoriesPage() {
   }
 
   async function remove(id) {
+    if (childrenOf(id).length > 0) {
+      toast.error('Delete or reassign its subcategories first');
+      return;
+    }
     if (!confirm('Delete this category?')) return;
     const res = await fetch(`/api/categories/${id}`, { method: 'DELETE' });
     if (res.ok) { toast.success('Deleted'); load(); }
   }
 
-  // Swap sortOrder with the neighboring category and persist both
-  async function move(index, direction) {
+  // Swap sortOrder with the neighboring category *within the same sibling
+  // list* (top-level categories reorder among themselves; subcategories
+  // reorder among their own siblings) and persist both.
+  async function move(list, index, direction) {
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    if (targetIndex < 0 || targetIndex >= categories.length) return;
+    if (targetIndex < 0 || targetIndex >= list.length) return;
 
-    const current = categories[index];
-    const target = categories[targetIndex];
+    const current = list[index];
+    const target = list[targetIndex];
 
     const currentOrder = current.sortOrder ?? 0;
     const targetOrder = target.sortOrder ?? 0;
@@ -215,6 +285,26 @@ export default function AdminCategoriesPage() {
 
           <input required placeholder="Category name (e.g. Umbrella Kurtis)" className="w-full border rounded-lg px-3 py-2 text-sm" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           <input placeholder="Slug (auto if blank)" className="w-full border rounded-lg px-3 py-2 text-sm" value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value })} />
+
+          {/* Parent category — leave blank for a main/top-level category.
+              Only top-level categories are selectable as a parent, so the
+              hierarchy stays two levels deep (category -> subcategory). */}
+          <div>
+            <label className="block text-xs text-brand-ink/50 mb-1">
+              Parent category (leave blank for a main, top-level category)
+            </label>
+            <select
+              className="w-full border rounded-lg px-3 py-2 text-sm"
+              value={form.parent || ''}
+              onChange={(e) => setForm({ ...form, parent: e.target.value })}
+            >
+              <option value="">— None (main category) —</option>
+              {topLevel.filter((c) => c._id !== editingId).map((c) => (
+                <option key={c._id} value={c._id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+
           <input placeholder="Available sizes, comma separated (S, M, L, XL)" className="w-full border rounded-lg px-3 py-2 text-sm" value={form.sizes} onChange={(e) => setForm({ ...form, sizes: e.target.value })} />
           <textarea placeholder="Description" className="w-full border rounded-lg px-3 py-2 text-sm" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
 
@@ -252,7 +342,7 @@ export default function AdminCategoriesPage() {
 
           <div>
             <label className="block text-xs text-brand-ink/50 mb-1">
-              Display order (lower numbers show first)
+              Display order (lower numbers show first, among siblings)
             </label>
             <input
               type="number"
@@ -270,39 +360,37 @@ export default function AdminCategoriesPage() {
       )}
 
       <div className="space-y-2">
-        {categories.map((c, index) => (
-          <div key={c._id} className="card-soft p-4 flex items-center gap-3">
-            <div className="flex flex-col">
-              <button
-                onClick={() => move(index, 'up')}
-                disabled={index === 0 || reordering}
-                className="p-0.5 text-brand-ink/40 hover:text-brand-magenta disabled:opacity-20 disabled:hover:text-brand-ink/40"
-              >
-                <ArrowUp size={14} />
-              </button>
-              <button
-                onClick={() => move(index, 'down')}
-                disabled={index === categories.length - 1 || reordering}
-                className="p-0.5 text-brand-ink/40 hover:text-brand-magenta disabled:opacity-20 disabled:hover:text-brand-ink/40"
-              >
-                <ArrowDown size={14} />
-              </button>
+        {topLevel.map((c) => {
+          const children = childrenOf(c._id);
+          const cIndex = topLevel.indexOf(c);
+          return (
+            <div key={c._id} className="space-y-2">
+              <CategoryRow
+                category={c}
+                onMoveUp={() => move(topLevel, cIndex, 'up')}
+                onMoveDown={() => move(topLevel, cIndex, 'down')}
+                disableUp={cIndex === 0 || reordering}
+                disableDown={cIndex === topLevel.length - 1 || reordering}
+                onEdit={() => startEdit(c)}
+                onDelete={() => remove(c._id)}
+                onAddSub={() => startNewSub(c._id)}
+              />
+              {children.map((child, i) => (
+                <CategoryRow
+                  key={child._id}
+                  category={child}
+                  indent
+                  onMoveUp={() => move(children, i, 'up')}
+                  onMoveDown={() => move(children, i, 'down')}
+                  disableUp={i === 0 || reordering}
+                  disableDown={i === children.length - 1 || reordering}
+                  onEdit={() => startEdit(child)}
+                  onDelete={() => remove(child._id)}
+                />
+              ))}
             </div>
-
-            <div className="w-12 h-12 rounded-full bg-brand-cream overflow-hidden shrink-0">
-              {c.image && <img src={c.image} alt={c.name} className="w-full h-full object-cover" />}
-            </div>
-            <div className="flex-1">
-              <p className="font-medium">{c.name}</p>
-              <p className="text-xs text-brand-ink/50">
-                /{c.slug} · order: {c.sortOrder ?? 0}
-                {c.sizeChart?.length ? ` · ${c.sizeChart.length} size chart image${c.sizeChart.length > 1 ? 's' : ''}` : ''}
-              </p>
-            </div>
-            <button onClick={() => startEdit(c)} className="text-brand-magenta p-1"><Pencil size={16} /></button>
-            <button onClick={() => remove(c._id)} className="text-brand-magenta p-1"><Trash2 size={16} /></button>
-          </div>
-        ))}
+          );
+        })}
         {categories.length === 0 && (
           <p className="text-center text-brand-ink/40 py-10">No categories yet.</p>
         )}

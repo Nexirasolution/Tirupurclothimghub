@@ -42,7 +42,10 @@ async function getData() {
     Review.find({ isApproved: true, isFeatured: true }).populate('product', 'name').limit(10).lean(),
     Reel.find({ isActive: true }).sort({ sortOrder: 1 }).populate('product', 'name slug').limit(10).lean(),
     Combo.find({ isActive: true }).limit(6).lean(),
-    Category.find({ isActive: true }).limit(10).lean(),
+    // Only main categories here — subcategories are excluded from the
+    // homepage "Shop by Category" grid, which only ever links straight
+    // into a single category page (no drill-down UI on that page anymore).
+    Category.find({ isActive: true, parent: null }).limit(10).lean(),
   ]);
   return { banners, bestSellers, topSellers, activeSellers, reviews, reels, combos, categories };
 }

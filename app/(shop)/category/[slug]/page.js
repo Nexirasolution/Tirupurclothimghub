@@ -2,21 +2,16 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import ProductCard from '@/components/ProductCard';
 import Filters from '@/components/Filters';
 
-// A URL `flag` (set by Navbar's Shop links) maps to a dropdown value where
-// one exists, so arriving via "Best Sellers" pre-selects the matching option.
-// 'topseller' has no dropdown equivalent, so it falls back to "Newest" shown
-// — the flag itself is tracked separately below and still applied.
 function flagToSortValue(flag) {
   if (flag === 'bestseller') return 'bestselling';
   if (flag === 'newarrival') return 'newarrival';
   return 'newest';
 }
 
-// The dropdown's real API sort field — 'newarrival'/'bestselling' aren't
-// actual sort keys the API knows, they're shortcuts for a flag + a sort.
 function sortToApiSort(sort) {
   if (sort === 'newarrival') return 'newest';
   if (sort === 'bestselling') return 'popular';
@@ -26,25 +21,21 @@ function sortToApiSort(sort) {
 export default function CategoryPage() {
   const { slug } = useParams();
   const searchParams = useSearchParams();
-  const urlFlag = searchParams.get('flag'); // bestseller | topseller | newarrival | null
+  const urlFlag = searchParams.get('flag');
 
   const [category, setCategory] = useState(null);
+  const [subcategories, setSubcategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [sort, setSort] = useState(flagToSortValue(urlFlag));
   const [flag, setFlag] = useState(urlFlag);
   const [loading, setLoading] = useState(true);
 
-  // Navigating here via a new Shop link (slug or flag changes) re-syncs both
-  // the dropdown and the active flag from the URL.
   useEffect(() => {
     setSort(flagToSortValue(urlFlag));
     setFlag(urlFlag);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, urlFlag]);
 
-  // Manually changing the dropdown sets flag to match "New Arrival" /
-  // "Best Selling", or clears it for a plain sort (including replacing
-  // a "topseller" view reached via the nav link, since it has no dropdown slot).
   function handleSortChange(value) {
     setSort(value);
     if (value === 'newarrival') setFlag('newarrival');
@@ -57,6 +48,7 @@ export default function CategoryPage() {
     const catRes = await fetch(`/api/categories/${slug}`);
     const catData = await catRes.json();
     setCategory(catData.category);
+    setSubcategories(catData.subcategories || []);
 
     const params = new URLSearchParams({
       category: slug,
@@ -85,6 +77,16 @@ export default function CategoryPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
 
+      {/* Back-to-parent breadcrumb, for when we're viewing a subcategory */}
+      {category?.parent && (
+        <Link
+          href={`/category/${category.parent.slug}`}
+          className="text-sm text-neutral-500 hover:text-neutral-800 inline-flex items-center gap-1 mb-3"
+        >
+          ← {category.parent.name}
+        </Link>
+      )}
+
       <div className="mb-6">
         <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-neutral-900">
           {heading}
@@ -94,6 +96,33 @@ export default function CategoryPage() {
           <p className="text-sm mt-1.5 text-neutral-500">{category.description}</p>
         )}
       </div>
+
+      {/* Subcategory nav — only shown on a main category that has children */}
+      {subcategories.length > 0 && (
+        <div className="flex gap-3 overflow-x-auto pb-2 mb-6 -mx-1 px-1">
+          {subcategories.map((sub) => (
+            <Link
+              key={sub._id}
+              href={`/category/${sub.slug}`}
+              className="flex-shrink-0 w-28 flex flex-col items-center gap-2 group"
+            >
+              <div className="w-24 h-24 rounded-full overflow-hidden bg-pink-50 border border-neutral-100">
+                {sub.image && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={sub.image}
+                    alt={sub.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                  />
+                )}
+              </div>
+              <span className="text-xs font-medium text-neutral-700 text-center leading-tight">
+                {sub.name}
+              </span>
+            </Link>
+          ))}
+        </div>
+      )}
 
       <Filters sort={sort} onSortChange={handleSortChange} />
 
