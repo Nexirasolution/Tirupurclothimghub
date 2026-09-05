@@ -38,15 +38,50 @@ export default function AdminSettingsPage() {
           <label className="text-sm font-medium">Address</label>
           <input className="w-full border rounded-lg px-3 py-2 text-sm mt-1" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
         </div>
+
+        {/* Weight-based shipping inputs — replaces the old flat shipping fee.
+            Total order weight = (sum of piece quantities in cart) × weight per piece,
+            then charged at price/kg, rounded up to the next whole kg. */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-sm font-medium">Shipping Fee (₹)</label>
-            <input type="number" className="w-full border rounded-lg px-3 py-2 text-sm mt-1" value={form.shippingFee} onChange={(e) => setForm({ ...form, shippingFee: Number(e.target.value) })} />
+            <label className="text-sm font-medium">Weight per Piece (grams)</label>
+            <input
+              type="number"
+              className="w-full border rounded-lg px-3 py-2 text-sm mt-1"
+              value={form.weightPerPiece}
+              onChange={(e) => setForm({ ...form, weightPerPiece: Number(e.target.value) })}
+            />
           </div>
           <div>
-            <label className="text-sm font-medium">Free Shipping Above (₹)</label>
-            <input type="number" className="w-full border rounded-lg px-3 py-2 text-sm mt-1" value={form.freeShippingAbove} onChange={(e) => setForm({ ...form, freeShippingAbove: Number(e.target.value) })} />
+            <label className="text-sm font-medium">Price per Kg (₹)</label>
+            <input
+              type="number"
+              className="w-full border rounded-lg px-3 py-2 text-sm mt-1"
+              value={form.pricePerKg}
+              onChange={(e) => setForm({ ...form, pricePerKg: Number(e.target.value) })}
+            />
           </div>
+        </div>
+        <p className="text-xs text-brand-ink/50 -mt-1">
+          e.g. 250g per piece and ₹60/kg means a 3-piece order (750g) rounds up to 1kg → ₹60 shipping.
+        </p>
+
+        <div>
+          <label className="text-sm font-medium">Default Shipping Charge (₹)</label>
+          <input
+            type="number"
+            className="w-full border rounded-lg px-3 py-2 text-sm mt-1"
+            value={form.defaultShippingCharge}
+            onChange={(e) => setForm({ ...form, defaultShippingCharge: Number(e.target.value) })}
+          />
+          <p className="text-xs text-brand-ink/50 mt-1">
+            Used instead of the weight calculation if Weight per Piece or Price per Kg is left at 0.
+          </p>
+        </div>
+
+        <div>
+          <label className="text-sm font-medium">Free Shipping Above (₹)</label>
+          <input type="number" className="w-full border rounded-lg px-3 py-2 text-sm mt-1" value={form.freeShippingAbove} onChange={(e) => setForm({ ...form, freeShippingAbove: Number(e.target.value) })} />
         </div>
         <div>
           <label className="text-sm font-medium">SEO Title</label>

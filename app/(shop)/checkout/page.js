@@ -58,13 +58,17 @@ export default function CheckoutPage() {
   const discountedSubtotal = subtotal - discount;
   const total = shipping !== null ? Math.round(discountedSubtotal + shipping) : null;
 
+  // Total piece count across the cart — used by the shipping API to work
+  // out order weight (totalQty × weight-per-piece from admin Settings).
+  const totalQty = items.reduce((sum, i) => sum + (i.qty || 0), 0);
+
   const fetchShipping = useCallback(async () => {
     setShippingLoading(true);
     try {
       const res = await fetch('/api/admin/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subtotal: discountedSubtotal })
+        body: JSON.stringify({ subtotal: discountedSubtotal, totalQty })
       });
       const data = await res.json();
       if (res.ok) {
@@ -78,7 +82,7 @@ export default function CheckoutPage() {
     } finally {
       setShippingLoading(false);
     }
-  }, [discountedSubtotal]);
+  }, [discountedSubtotal, totalQty]);
 
   useEffect(() => { fetchShipping(); }, [fetchShipping]);
 
