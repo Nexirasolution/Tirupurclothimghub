@@ -28,6 +28,15 @@ const ProductSchema = new mongoose.Schema(
     fabric: { type: String, default: '' },
     tags: [{ type: String }],
     variants: [VariantSchema],
+
+    // One or more optional size chart images. If empty, the storefront
+    // falls back to this product's category.sizeChart instead.
+    sizeChart: [{ type: String }],
+
+    // When true, the storefront shows a highlighted "Ready to Ship" badge
+    // below the product title.
+    isReadyToShip: { type: Boolean, default: false },
+
     basePrice: { type: Number, required: true }, // used for listing/sorting
     rating: { type: Number, default: 0 },
     reviewCount: { type: Number, default: 0 },

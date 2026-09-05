@@ -9,14 +9,17 @@ function getFilter(id) {
   return mongoose.isValidObjectId(id) ? { _id: id } : { slug: id };
 }
 
-// GET stays exactly the same — unchanged, omitted here for brevity
 export async function GET(req, { params }) {
   await dbConnect();
 
+  // Added `sizeChart` to the category populate — the product detail page
+  // falls back to product.category.sizeChart when the product itself has
+  // no size chart of its own. Without this field selected here, that
+  // fallback is always undefined even if the category has one saved.
   const product = await Product.findOne({
     ...getFilter(params.id),
     isActive: true,
-  }).populate('category', 'name slug sizes type'); // added type
+  }).populate('category', 'name slug sizes type sizeChart');
 
   if (!product) return NextResponse.json({ error: 'Product not found' }, { status: 404 });
 
@@ -29,10 +32,11 @@ export async function GET(req, { params }) {
   })
     .limit(8)
     .select('name slug basePrice variants rating')
-    .populate('category', 'name slug type'); // so ProductCard in "related" grid also knows type
+    .populate('category', 'name slug type sizeChart'); // kept consistent, though ProductCard doesn't use it today
 
   return NextResponse.json({ product, reviews, related });
 }
+
 export const PUT = requireAdmin(async (req, { params }) => {
   await dbConnect();
   const body = await req.json();
@@ -49,6 +53,10 @@ export const PUT = requireAdmin(async (req, { params }) => {
     body.basePrice = Math.min(...body.variants.map((v) => v.price));
   }
 
+  // body already carries sizeChart / isReadyToShip when the admin form sends
+  // them — findOneAndUpdate persists whatever fields are present on body,
+  // so no extra handling is required here as long as the Product schema
+  // (models/Product.js) actually defines these two paths.
   const product = await Product.findOneAndUpdate(getFilter(params.id), body, { new: true });
   if (!product) return NextResponse.json({ error: 'Product not found' }, { status: 404 });
 

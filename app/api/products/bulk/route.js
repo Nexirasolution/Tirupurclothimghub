@@ -9,7 +9,8 @@ import { requireAdmin } from '@/lib/apiAuth';
 // body: {
 //   category, skuPrefix, description, fabric,
 //   price, compareAtPrice, sizes: [{ size, stock }],
-//   images: [url, url, ...], tags
+//   images: [url, url, ...], tags,
+//   isReadyToShip, sizeChart: [url, url, ...]
 // }
 // Creates ONE product per image.
 // - Title = auto-derived from the CATEGORY name + zero-padded number,
@@ -19,6 +20,9 @@ import { requireAdmin } from '@/lib/apiAuth';
 // - SKU = admin-typed short code + zero-padded number, e.g. "MT" -> MT001, MT002...
 //   (continues from the highest existing SKU with that code, globally,
 //   since SKU is a global-unique field)
+// - isReadyToShip / sizeChart, if provided, are applied identically to every
+//   product created in this batch. sizeChart is optional — if omitted, the
+//   storefront falls back to the category's own size chart images.
 export const POST = requireAdmin(async (req) => {
   try {
     await dbConnect();
@@ -34,6 +38,8 @@ export const POST = requireAdmin(async (req) => {
       sizes = [],
       images = [],
       tags = [],
+      isReadyToShip = false,
+      sizeChart = [],
     } = body;
 
     if (!category) {
@@ -54,6 +60,12 @@ export const POST = requireAdmin(async (req) => {
     if (sizeEntries.length === 0) {
       return NextResponse.json({ error: 'At least one size with stock is required' }, { status: 400 });
     }
+
+    // Accept either an array of image URLs (current format) or a single
+    // legacy string, so older clients can't accidentally wipe the field.
+    const sizeChartImages = Array.isArray(sizeChart)
+      ? sizeChart.filter(Boolean)
+      : (sizeChart ? [sizeChart] : []);
 
     const cat = await Category.findById(category);
     if (!cat) return NextResponse.json({ error: 'Category not found' }, { status: 404 });
@@ -144,6 +156,8 @@ export const POST = requireAdmin(async (req) => {
           tags,
           variants: [variant],
           basePrice: Number(price),
+          isReadyToShip: !!isReadyToShip,
+          sizeChart: sizeChartImages,
         });
 
         created.push({ id: product._id, name: product.name, sku: product.sku });

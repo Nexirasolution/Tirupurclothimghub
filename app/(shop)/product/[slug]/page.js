@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Fraunces, Inter } from 'next/font/google';
-import { Star, ShoppingBag, Zap, Heart, Share2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Star, ShoppingBag, Zap, Heart, Share2, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { formatINR } from '@/lib/utils';
 import { getSizeStock } from '@/lib/stock';
 import { useCart } from '@/components/CartContext';
@@ -39,6 +39,11 @@ export default function ProductPage() {
   const [wished, setWished] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [lightboxImg, setLightboxImg] = useState(null);
+
+  // Size chart carousel modal
+  const [sizeChartOpen, setSizeChartOpen] = useState(false);
+  const [sizeChartIndex, setSizeChartIndex] = useState(0);
+
   const { addItem } = useCart();
 
   useEffect(() => {
@@ -71,11 +76,19 @@ export default function ProductPage() {
     ? Math.round(((activeVariant.compareAtPrice - activeVariant.price) / activeVariant.compareAtPrice) * 100)
     : 0;
 
+  // Product's own size chart images win; otherwise fall back to the
+  // category's. Requires GET /api/products/[slug] to populate
+  // category with `sizeChart`.
+  const sizeChartImages = product.sizeChart?.length ? product.sizeChart : (product.category?.sizeChart || []);
+
   const selectedSizeStock = getSizeStock(activeVariant, activeSize);
   const sizeOutOfStock = !!activeSize && selectedSizeStock <= 0;
 
   function prevImage() { setActiveImage((i) => (i === 0 ? images.length - 1 : i - 1)); }
   function nextImage() { setActiveImage((i) => (i === images.length - 1 ? 0 : i + 1)); }
+
+  function prevSizeChart() { setSizeChartIndex((i) => (i === 0 ? sizeChartImages.length - 1 : i - 1)); }
+  function nextSizeChart() { setSizeChartIndex((i) => (i === sizeChartImages.length - 1 ? 0 : i + 1)); }
 
   function handleShare() {
     if (navigator.share) {
@@ -251,6 +264,16 @@ export default function ProductPage() {
               {product.name}
             </h1>
 
+            {/* Ready to Ship badge — highlighted, sits just under the title */}
+            {product.isReadyToShip && (
+              <span
+                className="inline-block mt-2.5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide w-fit"
+                style={{ background: PEACH_WASH, color: PEACH, borderRadius: '4px' }}
+              >
+                Ready to Ship
+              </span>
+            )}
+
             <div className="flex items-center gap-1.5 mt-2.5 text-sm" style={{ color: INK_SOFT }}>
               <Star size={13} strokeWidth={1.5} style={{ fill: PEACH, color: PEACH }} />
               <span style={{ color: INK }}>{product.rating?.toFixed?.(1) ?? product.rating}</span>
@@ -287,6 +310,8 @@ export default function ProductPage() {
                 activeSize={activeSize}
                 onSizeChange={handleSizeChange}
                 categoryType={product.category?.type}
+                sizeChartImages={sizeChartImages}
+                onViewSizeChart={() => { setSizeChartIndex(0); setSizeChartOpen(true); }}
               />
             </div>
 
@@ -445,7 +470,7 @@ export default function ProductPage() {
         document.body
       )}
 
-      {/* Review-image lightbox — portaled, closes on backdrop click */}
+      {/* Review-image lightbox — single image, closes on backdrop click or the ✕ button */}
       {mounted && lightboxImg && createPortal(
         <div
           onClick={() => setLightboxImg(null)}
@@ -453,7 +478,73 @@ export default function ProductPage() {
           style={{ background: 'rgba(36,27,33,0.85)', zIndex: 10000 }}
         >
           <div className="relative w-full max-w-md aspect-square" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setLightboxImg(null)}
+              className="absolute -top-11 right-0 sm:-top-2 sm:-right-11 w-9 h-9 flex items-center justify-center rounded-full"
+              style={{ background: 'rgba(255,255,255,0.15)', color: PAPER }}
+              aria-label="Close"
+            >
+              <X size={20} />
+            </button>
             <Image src={lightboxImg} alt="Review image" fill className="object-contain" sizes="90vw" />
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Size chart modal — swipeable carousel when there's more than one
+          image, closes on backdrop click or the ✕ button */}
+      {mounted && sizeChartOpen && sizeChartImages.length > 0 && createPortal(
+        <div
+          onClick={() => setSizeChartOpen(false)}
+          className="fixed inset-0 flex items-center justify-center p-6"
+          style={{ background: 'rgba(36,27,33,0.85)', zIndex: 10000 }}
+        >
+          <div className="relative w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setSizeChartOpen(false)}
+              className="absolute -top-11 right-0 sm:-top-2 sm:-right-11 w-9 h-9 flex items-center justify-center rounded-full"
+              style={{ background: 'rgba(255,255,255,0.15)', color: PAPER }}
+              aria-label="Close size chart"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="relative w-full aspect-square" style={{ background: PAPER, borderRadius: '4px', overflow: 'hidden' }}>
+              <Image
+                src={sizeChartImages[sizeChartIndex]}
+                alt={`Size chart ${sizeChartIndex + 1} of ${sizeChartImages.length}`}
+                fill
+                className="object-contain"
+                sizes="90vw"
+              />
+
+              {sizeChartImages.length > 1 && (
+                <>
+                  <button
+                    onClick={prevSizeChart}
+                    className="absolute left-0 top-0 bottom-0 w-1/4 flex items-center justify-start pl-2"
+                    aria-label="Previous size chart image"
+                  >
+                    <ChevronLeft size={22} strokeWidth={1.5} style={{ color: INK }} />
+                  </button>
+                  <button
+                    onClick={nextSizeChart}
+                    className="absolute right-0 top-0 bottom-0 w-1/4 flex items-center justify-end pr-2"
+                    aria-label="Next size chart image"
+                  >
+                    <ChevronRight size={22} strokeWidth={1.5} style={{ color: INK }} />
+                  </button>
+
+                  <div
+                    className="absolute bottom-3 right-3 text-[11px] font-medium tracking-wide"
+                    style={{ color: INK }}
+                  >
+                    {String(sizeChartIndex + 1).padStart(2, '0')} / {String(sizeChartImages.length).padStart(2, '0')}
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>,
         document.body

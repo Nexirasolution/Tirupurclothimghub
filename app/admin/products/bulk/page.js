@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { X, UploadCloud, Loader2, Plus } from 'lucide-react';
+import { X, UploadCloud, Loader2, Plus, Upload } from 'lucide-react';
 
 export default function BulkAddProductsPage() {
   const router = useRouter();
@@ -17,6 +17,15 @@ export default function BulkAddProductsPage() {
   const [price, setPrice] = useState('');
   const [compareAtPrice, setCompareAtPrice] = useState('');
   const [stockBySize, setStockBySize] = useState({}); // { S: 10, M: 10, ... }
+
+  // Applies to every product created in this batch
+  const [isReadyToShip, setIsReadyToShip] = useState(false);
+
+  // Optional — one or more shared size chart images applied to every
+  // product in this batch. Leave empty to fall back to the category's
+  // size chart instead.
+  const [sizeChart, setSizeChart] = useState([]);
+  const [sizeChartUploading, setSizeChartUploading] = useState(false);
 
   // Fallback for categories that have no predefined sizes configured
   const [manualSizeName, setManualSizeName] = useState('');
@@ -86,6 +95,33 @@ export default function BulkAddProductsPage() {
     return data.url;
   }
 
+  // Size chart — supports multiple images. Selecting several files at once
+  // uploads each in turn and appends every resulting URL to the shared array.
+  async function handleSizeChartFilesChange(e) {
+    const selected = Array.from(e.target.files || []);
+    if (selected.length === 0) return;
+
+    setSizeChartUploading(true);
+    try {
+      const uploaded = [];
+      for (const file of selected) {
+        const url = await uploadImage(file);
+        uploaded.push(url);
+      }
+      setSizeChart((prev) => [...prev, ...uploaded]);
+      toast.success(`${uploaded.length} size chart image${uploaded.length > 1 ? 's' : ''} uploaded`);
+    } catch (err) {
+      toast.error(err.message || 'Failed to upload size chart');
+    } finally {
+      setSizeChartUploading(false);
+      e.target.value = '';
+    }
+  }
+
+  function removeSizeChartImage(idx) {
+    setSizeChart((prev) => prev.filter((_, i) => i !== idx));
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setResult(null);
@@ -133,6 +169,8 @@ export default function BulkAddProductsPage() {
           compareAtPrice: Number(compareAtPrice) || 0,
           sizes,
           images: imageUrls,
+          isReadyToShip,
+          sizeChart,
         }),
       });
 
@@ -244,6 +282,55 @@ export default function BulkAddProductsPage() {
             className="w-full px-3 py-2 text-sm rounded-lg border border-brand-ink/10 outline-none"
           />
         </div>
+
+        {/* Size chart — optional, shared across every product in this batch */}
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            Size chart images (optional — applied to every product in this batch; falls back to the category's size chart if left empty)
+          </label>
+          <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
+            {sizeChart.map((url, idx) => (
+              <div key={idx} className="relative aspect-square rounded-md overflow-hidden bg-brand-ink/5">
+                <img src={url} alt="" className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removeSizeChartImage(idx)}
+                  className="absolute top-1 right-1 w-5 h-5 bg-black/60 rounded-full flex items-center justify-center text-white"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              disabled={sizeChartUploading}
+              onClick={() => document.getElementById('bulk-size-chart-input')?.click()}
+              className="aspect-square rounded-md border-2 border-dashed border-brand-ink/20 flex flex-col items-center justify-center gap-1 text-brand-ink/40 hover:border-brand-magenta/40 disabled:opacity-50"
+            >
+              {sizeChartUploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+              <span className="text-[10px]">{sizeChartUploading ? 'Uploading…' : 'Add'}</span>
+            </button>
+          </div>
+          <input
+            id="bulk-size-chart-input"
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={handleSizeChartFilesChange}
+          />
+        </div>
+
+        {/* Ready to ship — applies to every product created in this batch */}
+        <label className="flex items-center gap-2 text-sm cursor-pointer w-fit">
+          <input
+            type="checkbox"
+            checked={isReadyToShip}
+            onChange={(e) => setIsReadyToShip(e.target.checked)}
+            className="w-4 h-4"
+          />
+          Mark all products in this batch as "Ready to Ship"
+        </label>
 
         {/* Predefined sizes from the category */}
         {categorySizes.length > 0 && (

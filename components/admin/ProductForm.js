@@ -18,6 +18,12 @@ function emptyVariant() {
   return { color: '', colorHex: '#D9946A', images: [''], price: '', compareAtPrice: '', sizes: [{ size: '', stock: 0, sku: '' }] };
 }
 
+function normalizeSizeChart(value) {
+  if (Array.isArray(value)) return value;
+  if (value) return [value]; // backward-compat with the old single-string field
+  return [];
+}
+
 // Shared input style
 const inputStyle = {
   border: `1px solid ${LINE}`,
@@ -133,14 +139,19 @@ function ImageSlot({ value, onChange, onRemove, showRemove }) {
 export default function ProductForm({ initial, productId }) {
   const router = useRouter();
   const [categories, setCategories] = useState([]);
-  const [form, setForm] = useState(
-    initial || {
+  const [form, setForm] = useState(() => {
+    const base = initial || {
       name: '', slug: '', sku: '', description: '', category: '', fabric: '', tags: [],
       variants: [emptyVariant()],
+      sizeChart: [],
       isBestSeller: false, isTopSeller: false, isActiveSeller: true, isFeatured: false, isActive: true,
-    }
-  );
+      isReadyToShip: false,
+    };
+    return { ...base, sizeChart: normalizeSizeChart(base.sizeChart) };
+  });
   const [saving, setSaving] = useState(false);
+  const [sizeChartUploading, setSizeChartUploading] = useState(false);
+  const sizeChartFileRef = useRef();
 
   useEffect(() => {
     fetch('/api/categories').then((r) => r.json()).then((d) => setCategories(d.categories || []));
@@ -208,6 +219,37 @@ export default function ProductForm({ initial, productId }) {
   function addVariant() { setForm((f) => ({ ...f, variants: [...f.variants, emptyVariant()] })); }
   function removeVariant(idx) { setForm((f) => ({ ...f, variants: f.variants.filter((_, i) => i !== idx) })); }
 
+  // Size chart — supports multiple images. Selecting several files at once
+  // uploads each in turn and appends every resulting URL to the array.
+  async function handleSizeChartFilesChange(e) {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    setSizeChartUploading(true);
+    try {
+      const uploaded = [];
+      for (const file of files) {
+        const fd = new FormData();
+        fd.append('file', file);
+        const res = await fetch('/api/upload', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Upload failed');
+        uploaded.push(data.url);
+      }
+      setForm((f) => ({ ...f, sizeChart: [...(f.sizeChart || []), ...uploaded] }));
+      toast.success(`${uploaded.length} size chart image${uploaded.length > 1 ? 's' : ''} uploaded`);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setSizeChartUploading(false);
+      e.target.value = '';
+    }
+  }
+
+  function removeSizeChartImage(idx) {
+    setForm((f) => ({ ...f, sizeChart: (f.sizeChart || []).filter((_, i) => i !== idx) }));
+  }
+
   async function submit(e) {
     e.preventDefault();
     setSaving(true);
@@ -215,6 +257,7 @@ export default function ProductForm({ initial, productId }) {
     // based on the product's category (see /api/products and /api/products/[id]).
     const payload = {
       ...form,
+      sizeChart: form.sizeChart || [],
       variants: form.variants.map((v) => ({
         ...v,
         price: Number(v.price),
@@ -313,6 +356,42 @@ export default function ProductForm({ initial, productId }) {
             />
           </div>
 
+          {/* Size chart — one or more images. If left empty, the storefront
+              falls back to this product's category size chart. */}
+          <div className="sm:col-span-2">
+            <label style={labelStyle}>
+              Size Chart <span style={{ fontWeight: '400', textTransform: 'none', letterSpacing: 0 }}>
+                (optional — shown as a gallery on the product page; falls back to the category's size chart if left empty)
+              </span>
+            </label>
+            <div className="grid grid-cols-4 sm:grid-cols-6 gap-3 mt-2">
+              {(form.sizeChart || []).map((url, idx) => (
+                <div key={idx} className="relative aspect-square overflow-hidden" style={{ borderRadius: '4px', border: `1px solid ${LINE}` }}>
+                  <img src={url} alt="" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removeSizeChartImage(idx)}
+                    className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center"
+                    style={{ background: 'rgba(0,0,0,0.6)', color: PAPER }}
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                disabled={sizeChartUploading}
+                onClick={() => sizeChartFileRef.current?.click()}
+                className="aspect-square flex flex-col items-center justify-center gap-1 disabled:opacity-50"
+                style={{ borderRadius: '4px', border: `1.5px dashed ${PEACH}`, background: PEACH_WASH, color: PEACH, cursor: 'pointer' }}
+              >
+                {sizeChartUploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+                <span style={{ fontSize: '10px', fontFamily: 'sans-serif' }}>{sizeChartUploading ? 'Uploading…' : 'Add'}</span>
+              </button>
+            </div>
+            <input ref={sizeChartFileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleSizeChartFilesChange} />
+          </div>
+
           {/* Toggles */}
           <div className="sm:col-span-2 flex flex-wrap gap-4">
             {[
@@ -321,6 +400,7 @@ export default function ProductForm({ initial, productId }) {
               ['isActiveSeller', 'Active Seller'],
               ['isFeatured', 'Featured'],
               ['isActive', 'Active (visible on site)'],
+              ['isReadyToShip', 'Ready to Ship'],
             ].map(([key, label]) => (
               <label
                 key={key}

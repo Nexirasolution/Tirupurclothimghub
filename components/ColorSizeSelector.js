@@ -7,11 +7,21 @@ const PEACH = '#D9946A';
 const LINE = '#EEE3DA';
 const PAPER = '#FFFFFF';
 
-export default function ColorSizeSelector({ variants, activeVariant, onColorChange, activeSize, onSizeChange, categoryType }) {
+export default function ColorSizeSelector({
+  variants,
+  activeVariant,
+  onColorChange,
+  activeSize,
+  onSizeChange,
+  categoryType,
+  sizeChartImages,
+  onViewSizeChart,
+}) {
   const isJewellery = categoryType === 'jewellery';
   const sizeStock = (size) => activeVariant?.sizes?.find((s) => s.size === size)?.stock ?? 0;
 
   const hasColors = variants?.some((v) => v.color && v.color.trim());
+  const hasSizeChart = Array.isArray(sizeChartImages) && sizeChartImages.length > 0;
 
   return (
     <div className="space-y-6">
@@ -101,6 +111,20 @@ export default function ColorSizeSelector({ variants, activeVariant, onColorChan
           <p className="mt-2.5 text-xs font-medium" style={{ color: PEACH }}>
             Only {sizeStock(activeSize)} left in stock
           </p>
+        )}
+
+        {/* Size chart — shown directly below the size selector. Resolved by
+            the parent as product.sizeChart, falling back to category.sizeChart.
+            Opens a swipeable carousel when there's more than one image. */}
+        {hasSizeChart && (
+          <button
+            type="button"
+            onClick={onViewSizeChart}
+            className="mt-2.5 text-xs font-medium underline underline-offset-2"
+            style={{ color: INK_SOFT }}
+          >
+            View size chart{sizeChartImages.length > 1 ? ` (${sizeChartImages.length})` : ''}
+          </button>
         )}
       </div>
     </div>

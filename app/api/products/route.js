@@ -81,8 +81,11 @@ export async function GET(req) {
     const page = Number(searchParams.get('page') || 1);
     const limit = Number(limitParam || 24);
 
+    // Added `sizeChart` so any storefront view built off this list (e.g. a
+    // quick-view modal) can resolve the same product -> category size-chart
+    // fallback used on the full product detail page.
     let productsQuery = Product.find(query)
-      .populate('category', 'name slug type')
+      .populate('category', 'name slug type sizeChart')
       .sort(sortMap[sort] || sortMap.newest);
 
     if (!fetchAll) {
@@ -124,6 +127,8 @@ export const POST = requireAdmin(async (req) => {
       ? Math.min(...body.variants.map((v) => v.price))
       : body.basePrice || 0;
 
+    // body already carries sizeChart / isReadyToShip when the admin form
+    // sends them — no extra handling needed here.
     const product = await Product.create({ ...body, slug, sku, basePrice });
     return NextResponse.json({ product }, { status: 201 });
   } catch (err) {

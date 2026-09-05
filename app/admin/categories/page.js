@@ -4,7 +4,13 @@ import { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Plus, Trash2, Pencil, X, Upload, Loader2, ArrowUp, ArrowDown } from 'lucide-react';
 
-const emptyForm = { name: '', slug: '', image: '', description: '', sizes: '', sortOrder: 0 };
+const emptyForm = { name: '', slug: '', image: '', description: '', sizes: '', sortOrder: 0, sizeChart: [] };
+
+function normalizeSizeChart(value) {
+  if (Array.isArray(value)) return value;
+  if (value) return [value]; // backward-compat with the old single-string field
+  return [];
+}
 
 export default function AdminCategoriesPage() {
   const [categories, setCategories] = useState([]);
@@ -13,8 +19,10 @@ export default function AdminCategoriesPage() {
   const [showForm, setShowForm] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState('');
+  const [sizeChartUploading, setSizeChartUploading] = useState(false);
   const [reordering, setReordering] = useState(false);
   const fileRef = useRef();
+  const sizeChartFileRef = useRef();
 
   async function load() {
     const res = await fetch('/api/categories');
@@ -31,7 +39,8 @@ export default function AdminCategoriesPage() {
       image: c.image || '',
       description: c.description || '',
       sizes: (c.sizes || []).join(', '),
-      sortOrder: c.sortOrder ?? 0
+      sortOrder: c.sortOrder ?? 0,
+      sizeChart: normalizeSizeChart(c.sizeChart)
     });
     setPreview(c.image || '');
     setShowForm(true);
@@ -73,12 +82,44 @@ export default function AdminCategoriesPage() {
     }
   }
 
+  // Size chart — supports multiple images. Selecting several files at once
+  // uploads each in turn and appends every resulting URL to the array.
+  async function handleSizeChartFilesChange(e) {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    setSizeChartUploading(true);
+    try {
+      const uploaded = [];
+      for (const file of files) {
+        const fd = new FormData();
+        fd.append('file', file);
+        const res = await fetch('/api/upload', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Upload failed');
+        uploaded.push(data.url);
+      }
+      setForm((f) => ({ ...f, sizeChart: [...(f.sizeChart || []), ...uploaded] }));
+      toast.success(`${uploaded.length} size chart image${uploaded.length > 1 ? 's' : ''} uploaded`);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setSizeChartUploading(false);
+      e.target.value = '';
+    }
+  }
+
+  function removeSizeChartImage(idx) {
+    setForm((f) => ({ ...f, sizeChart: (f.sizeChart || []).filter((_, i) => i !== idx) }));
+  }
+
   async function submit(e) {
     e.preventDefault();
     const payload = {
       ...form,
       sizes: form.sizes.split(',').map((s) => s.trim()).filter(Boolean),
-      sortOrder: Number(form.sortOrder) || 0
+      sortOrder: Number(form.sortOrder) || 0,
+      sizeChart: form.sizeChart || []
     };
     const url = editingId ? `/api/categories/${editingId}` : '/api/categories';
     const method = editingId ? 'PUT' : 'POST';
@@ -177,6 +218,38 @@ export default function AdminCategoriesPage() {
           <input placeholder="Available sizes, comma separated (S, M, L, XL)" className="w-full border rounded-lg px-3 py-2 text-sm" value={form.sizes} onChange={(e) => setForm({ ...form, sizes: e.target.value })} />
           <textarea placeholder="Description" className="w-full border rounded-lg px-3 py-2 text-sm" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
 
+          {/* Size chart — one or more images, used as the fallback on any
+              product in this category that has no size chart of its own */}
+          <div>
+            <label className="block text-xs text-brand-ink/50 mb-1">
+              Size chart images (optional — shown as a swipeable gallery on the storefront)
+            </label>
+            <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
+              {(form.sizeChart || []).map((url, idx) => (
+                <div key={idx} className="relative aspect-square rounded-md overflow-hidden bg-brand-cream border border-brand-ink/10">
+                  <img src={url} alt="" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => removeSizeChartImage(idx)}
+                    className="absolute top-1 right-1 w-5 h-5 bg-black/60 rounded-full flex items-center justify-center text-white"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                disabled={sizeChartUploading}
+                onClick={() => sizeChartFileRef.current?.click()}
+                className="aspect-square rounded-md border-2 border-dashed border-brand-ink/20 flex flex-col items-center justify-center gap-1 text-brand-ink/40 hover:border-brand-magenta/40 disabled:opacity-50"
+              >
+                {sizeChartUploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+                <span className="text-[10px]">{sizeChartUploading ? 'Uploading…' : 'Add'}</span>
+              </button>
+            </div>
+            <input ref={sizeChartFileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleSizeChartFilesChange} />
+          </div>
+
           <div>
             <label className="block text-xs text-brand-ink/50 mb-1">
               Display order (lower numbers show first)
@@ -190,7 +263,7 @@ export default function AdminCategoriesPage() {
             />
           </div>
 
-          <button className="btn-primary text-sm" disabled={uploading}>
+          <button className="btn-primary text-sm" disabled={uploading || sizeChartUploading}>
             {editingId ? 'Update' : 'Create'}
           </button>
         </form>
@@ -221,7 +294,10 @@ export default function AdminCategoriesPage() {
             </div>
             <div className="flex-1">
               <p className="font-medium">{c.name}</p>
-              <p className="text-xs text-brand-ink/50">/{c.slug} · order: {c.sortOrder ?? 0}</p>
+              <p className="text-xs text-brand-ink/50">
+                /{c.slug} · order: {c.sortOrder ?? 0}
+                {c.sizeChart?.length ? ` · ${c.sizeChart.length} size chart image${c.sizeChart.length > 1 ? 's' : ''}` : ''}
+              </p>
             </div>
             <button onClick={() => startEdit(c)} className="text-brand-magenta p-1"><Pencil size={16} /></button>
             <button onClick={() => remove(c._id)} className="text-brand-magenta p-1"><Trash2 size={16} /></button>
