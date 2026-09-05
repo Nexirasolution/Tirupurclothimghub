@@ -18,7 +18,7 @@ export default function WhatsAppButton({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       aria-label="Chat with us on WhatsApp"
-      className="fixed bottom-20 right-4 sm:bottom-5 sm:right-5 z-[60] flex items-center gap-2 rounded-full bg-[#25D366] text-white shadow-md hover:shadow-lg transition-all duration-300 px-4 py-3"
+      className="fixed bottom-20 left-4 sm:bottom-5 sm:left-5 z-[60] flex items-center gap-2 rounded-full bg-[#25D366] text-white shadow-md hover:shadow-lg transition-all duration-300 px-4 py-3"
       style={{ paddingRight: hovered ? '1.25rem' : '0.75rem' }}
     >
       <svg viewBox="0 0 32 32" className="w-7 h-7 shrink-0" fill="currentColor">

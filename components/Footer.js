@@ -7,11 +7,12 @@ import Category from '@/models/Category';
 const display = Fraunces({ subsets: ['latin'], weight: ['400'], variable: '--font-display' });
 const body = Inter({ subsets: ['latin'], weight: ['400', '500'], variable: '--font-body' });
 
-const PEACH = '#D9946A';
-const COFFEE_LIGHT = '#E4C4A1';
-const WHITE = '#FFFFFF';
-const WHITE_SOFT = 'rgba(255,255,255,0.72)';
-const LINE = 'rgba(255,255,255,0.22)';
+// Lightened palette — soft peach background with dark coffee text for contrast.
+const PEACH_LIGHT = '#FBF0E7';
+const PEACH_ACCENT = '#D9946A';
+const COFFEE = '#3E2B22';
+const COFFEE_SOFT = 'rgba(62,43,34,0.68)';
+const LINE = 'rgba(62,43,34,0.14)';
 
 // Actual WhatsApp glyph (brand mark) — lucide's MessageCircle is a generic
 // chat bubble, not the real logo, so this is an inline SVG instead.
@@ -41,34 +42,41 @@ export default async function Footer() {
     'https://www.instagram.com/tirupur_clothing_hub?utm_source=qr&igsi=ZTk1em9obGZtajMx';
   const categories = await getCategories();
 
+  const quickLinks = [
+    { label: 'Home', href: '/' },
+    { label: 'Shop', href: '/shop' },
+    { label: 'Wishlist', href: '/wishlist' },
+    { label: 'Contact', href: '/contact' },
+  ];
+
   return (
-    <footer className={`${body.className} mt-16`} style={{ background: PEACH }}>
+    <footer className={`${body.className} mt-16`} style={{ background: PEACH_LIGHT }}>
       <div className="max-w-7xl mx-auto px-4 py-14 grid grid-cols-1 sm:grid-cols-12 gap-10 sm:gap-8">
 
         {/* Brand column */}
-        <div className="sm:col-span-5">
-          <h3 className={`${display.className} text-2xl leading-tight`} style={{ color: WHITE, fontWeight: 400 }}>
+        <div className="sm:col-span-4">
+          <h3 className={`${display.className} text-2xl leading-tight`} style={{ color: COFFEE, fontWeight: 400 }}>
             Tirupur Clothing Hub
           </h3>
-          <p className="text-[11px] font-normal tracking-wide mb-4" style={{ color: COFFEE_LIGHT }}>
+          <p className="text-[11px] font-normal tracking-wide mb-4" style={{ color: PEACH_ACCENT }}>
             Wholesale &amp; Retail
           </p>
 
-          <p className="flex items-start gap-1.5 text-xs leading-relaxed" style={{ color: WHITE_SOFT }}>
-            <MapPin size={13} className="shrink-0 mt-0.5" style={{ color: COFFEE_LIGHT }} />
+          <p className="flex items-start gap-1.5 text-xs leading-relaxed" style={{ color: COFFEE_SOFT }}>
+            <MapPin size={13} className="shrink-0 mt-0.5" style={{ color: PEACH_ACCENT }} />
             127/18A Thalingikadu, Pitchampalayam Pudhur West,<br />
             Tirupur 641603
           </p>
 
-          <p className="inline-flex items-center gap-1.5 mt-4 text-[11px] font-normal tracking-wide" style={{ color: WHITE_SOFT }}>
-            <span className="w-1.5 h-1.5 rounded-full" style={{ background: COFFEE_LIGHT }} />
+          <p className="inline-flex items-center gap-1.5 mt-4 text-[11px] font-normal tracking-wide" style={{ color: COFFEE_SOFT }}>
+            <span className="w-1.5 h-1.5 rounded-full" style={{ background: PEACH_ACCENT }} />
             Online sales only
           </p>
         </div>
 
         {/* Shop links */}
-        <div className="sm:col-span-3">
-          <h4 className="font-medium mb-4 text-[11px] tracking-wide" style={{ color: WHITE_SOFT }}>
+        <div className="sm:col-span-2">
+          <h4 className="font-medium mb-4 text-[11px] tracking-wide" style={{ color: COFFEE_SOFT }}>
             Shop
           </h4>
           <ul className="space-y-2.5">
@@ -77,7 +85,7 @@ export default async function Footer() {
                 <Link
                   href={`/category/${cat.slug}`}
                   className="text-[13px] transition-colors"
-                  style={{ color: WHITE }}
+                  style={{ color: COFFEE }}
                 >
                   <span className="hover:opacity-70 transition-opacity">{cat.name}</span>
                 </Link>
@@ -86,9 +94,29 @@ export default async function Footer() {
           </ul>
         </div>
 
+        {/* Quick links */}
+        <div className="sm:col-span-3">
+          <h4 className="font-medium mb-4 text-[11px] tracking-wide" style={{ color: COFFEE_SOFT }}>
+            Quick Links
+          </h4>
+          <ul className="space-y-2.5">
+            {quickLinks.map((link) => (
+              <li key={link.href}>
+                <Link
+                  href={link.href}
+                  className="text-[13px] transition-colors"
+                  style={{ color: COFFEE }}
+                >
+                  <span className="hover:opacity-70 transition-opacity">{link.label}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+
         {/* Contact */}
-        <div className="sm:col-span-4">
-          <h4 className="font-medium mb-4 text-[11px] tracking-wide" style={{ color: WHITE_SOFT }}>
+        <div className="sm:col-span-3">
+          <h4 className="font-medium mb-4 text-[11px] tracking-wide" style={{ color: COFFEE_SOFT }}>
             Connect
           </h4>
 
@@ -100,7 +128,7 @@ export default async function Footer() {
               rel="noreferrer"
               aria-label="WhatsApp"
               className="flex items-center justify-center w-9 h-9 rounded-full transition-opacity hover:opacity-75"
-              style={{ background: 'transparent', border: `1px solid ${LINE}`, color: WHITE }}
+              style={{ background: 'transparent', border: `1px solid ${LINE}`, color: COFFEE }}
             >
               <WhatsAppIcon size={16} />
             </a>
@@ -110,19 +138,19 @@ export default async function Footer() {
               rel="noreferrer"
               aria-label="Instagram"
               className="flex items-center justify-center w-9 h-9 rounded-full transition-opacity hover:opacity-75"
-              style={{ background: 'transparent', border: `1px solid ${LINE}`, color: WHITE }}
+              style={{ background: 'transparent', border: `1px solid ${LINE}`, color: COFFEE }}
             >
               <Instagram size={16} strokeWidth={1.75} />
             </a>
           </div>
 
-          <div className="text-xs space-y-3 leading-relaxed" style={{ color: WHITE_SOFT }}>
+          <div className="text-xs space-y-3 leading-relaxed" style={{ color: COFFEE_SOFT }}>
             <p>
-              <span className="font-semibold" style={{ color: WHITE }}>WhatsApp</span><br />
+              <span className="font-semibold" style={{ color: COFFEE }}>WhatsApp</span><br />
               +91 80561 14537
             </p>
             <p>
-              <span className="font-semibold" style={{ color: WHITE }}>Email</span><br />
+              <span className="font-semibold" style={{ color: COFFEE }}>Email</span><br />
               tirupurclothinghub2025@gmail.com
             </p>
           </div>
@@ -132,7 +160,7 @@ export default async function Footer() {
       {/* Bottom bar */}
       <div style={{ borderTop: `1px solid ${LINE}` }}>
         <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p className="text-[11px]" style={{ color: WHITE_SOFT }}>
+          <p className="text-[11px]" style={{ color: COFFEE_SOFT }}>
             © {new Date().getFullYear()} Tirupur Clothing Hub. All rights reserved.
           </p>
 
@@ -141,10 +169,10 @@ export default async function Footer() {
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-1.5 text-[11px] transition-opacity hover:opacity-75"
-            style={{ color: WHITE_SOFT }}
+            style={{ color: COFFEE_SOFT }}
           >
             Designed and developed by
-            <span className="font-medium text-[11px] tracking-wide" style={{ color: COFFEE_LIGHT }}>
+            <span className="font-medium text-[11px] tracking-wide" style={{ color: PEACH_ACCENT }}>
               Nexira Solution
             </span>
           </a>

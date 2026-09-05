@@ -4,8 +4,9 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Search, ShoppingBag, Menu, X, ChevronDown } from 'lucide-react';
+import { Search, ShoppingBag, Menu, X, ChevronDown, ClipboardList, Heart } from 'lucide-react';
 import { useCart } from './CartContext';
+import { useWishlist } from './WhishlistContext';
 import CouponMarquee from './CouponMarquee';
 
 const COFFEE = '#3E2B22';
@@ -32,6 +33,8 @@ export default function Navbar() {
 
   const router = useRouter();
   const { count } = useCart();
+  const { wishlist } = useWishlist();
+  const wishlistCount = wishlist?.length || 0;
 
   useEffect(() => {
     fetch('/api/categories')
@@ -155,6 +158,14 @@ export default function Navbar() {
                     </div>
                   )}
                 </div>
+
+                <Link
+                  href="/orders"
+                  className="text-[13px] font-normal tracking-[1.5px] uppercase transition-colors"
+                  style={{ color: COFFEE }}
+                >
+                  Orders
+                </Link>
               </nav>
             </div>
 
@@ -165,7 +176,7 @@ export default function Navbar() {
               </div>
             </Link>
 
-            {/* Right: search + cart */}
+            {/* Right: search + wishlist + cart */}
             <div className="flex items-center gap-2.5 justify-self-end">
               <button
                 className="flex items-center justify-center w-10 h-10 rounded-full transition-colors"
@@ -175,6 +186,23 @@ export default function Navbar() {
               >
                 <Search size={16} strokeWidth={1.5} />
               </button>
+
+              <Link
+                href="/wishlist"
+                className="relative flex items-center justify-center w-10 h-10 rounded-full transition-colors"
+                style={{ color: COFFEE, border: `1px solid ${HAIRLINE}` }}
+                aria-label="Wishlist"
+              >
+                <Heart size={16} strokeWidth={1.5} />
+                {wishlistCount > 0 && (
+                  <span
+                    className="absolute -top-1 -right-1 text-[9px] font-semibold rounded-full w-[16px] h-[16px] flex items-center justify-center text-white"
+                    style={{ background: PEACH }}
+                  >
+                    {wishlistCount > 9 ? '9+' : wishlistCount}
+                  </span>
+                )}
+              </Link>
 
               <Link
                 href="/cart"
@@ -188,7 +216,7 @@ export default function Navbar() {
                     className="absolute -top-1 -right-1 text-[9px] font-semibold rounded-full w-[16px] h-[16px] flex items-center justify-center text-white"
                     style={{ background: PEACH }}
                   >
-                    {count}
+                    {count > 9 ? '9+' : count}
                   </span>
                 )}
               </Link>
@@ -293,6 +321,58 @@ export default function Navbar() {
                 )}
               </div>
             ))}
+
+            <Link
+              href="/orders"
+              onClick={closeMobileMenu}
+              className="flex items-center justify-between py-3.5 text-[14px] tracking-[1.5px] uppercase"
+              style={{ color: COFFEE, borderBottom: `1px solid ${HAIRLINE}` }}
+            >
+              <span className="flex items-center gap-2.5">
+                <ClipboardList size={16} strokeWidth={1.5} />
+                Orders
+              </span>
+            </Link>
+
+            <Link
+              href="/wishlist"
+              onClick={closeMobileMenu}
+              className="flex items-center justify-between py-3.5 text-[14px] tracking-[1.5px] uppercase"
+              style={{ color: COFFEE, borderBottom: `1px solid ${HAIRLINE}` }}
+            >
+              <span className="flex items-center gap-2.5">
+                <Heart size={16} strokeWidth={1.5} />
+                Wishlist
+              </span>
+              {wishlistCount > 0 && (
+                <span
+                  className="text-[10px] font-semibold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 text-white"
+                  style={{ background: PEACH }}
+                >
+                  {wishlistCount > 9 ? '9+' : wishlistCount}
+                </span>
+              )}
+            </Link>
+
+            <Link
+              href="/cart"
+              onClick={closeMobileMenu}
+              className="flex items-center justify-between py-3.5 text-[14px] tracking-[1.5px] uppercase"
+              style={{ color: COFFEE, borderBottom: `1px solid ${HAIRLINE}` }}
+            >
+              <span className="flex items-center gap-2.5">
+                <ShoppingBag size={16} strokeWidth={1.5} />
+                Cart
+              </span>
+              {count > 0 && (
+                <span
+                  className="text-[10px] font-semibold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 text-white"
+                  style={{ background: PEACH }}
+                >
+                  {count > 9 ? '9+' : count}
+                </span>
+              )}
+            </Link>
           </nav>
         </div>
       )}
