@@ -104,48 +104,48 @@ export default async function HomePage() {
 
       {/* Shop by Category */}
       {plainCategories?.length > 0 && (
-        <section className="max-w-6xl mx-auto px-4 pt-14 pb-6">
-          <h1
-            className="text-xl sm:text-2xl font-bold tracking-[3px] uppercase mb-6 text-center"
+  <section className="max-w-6xl mx-auto px-4 pt-14 pb-6">
+    <h1
+      className="text-xl sm:text-2xl font-bold tracking-[3px] uppercase mb-6 text-center"
+      style={{ color: COFFEE, fontFamily: FONT_SANS }}
+    >
+      Shop by Category
+    </h1>
+    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4 sm:gap-6">
+      {plainCategories.map((c) => (
+        <Link
+          key={c._id}
+          href={`/category/${c.slug}`}
+          className="group flex flex-col items-center text-center"
+        >
+          {/* Circular image */}
+          <div
+            className="relative w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full overflow-hidden bg-neutral-50 transition-transform duration-300 group-hover:scale-105"
+            style={{ border: `1px solid ${HAIRLINE}` }}
+          >
+            {c.image ? (
+              <img
+                src={c.image}
+                alt={c.name}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full" style={{ background: LIGHT_PEACH }} />
+            )}
+          </div>
+
+          {/* Label */}
+          <span
+            className="mt-2 text-[10.5px] sm:text-[11px] font-bold tracking-wide leading-tight line-clamp-2 max-w-[80px]"
             style={{ color: COFFEE, fontFamily: FONT_SANS }}
           >
-            Shop by Category
-          </h1>
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3 sm:gap-4">
-            {plainCategories.map((c) => (
-              <Link
-                key={c._id}
-                href={`/category/${c.slug}`}
-                className="group  overflow-hidden transition-colors bg-white"
-                style={{ border: `1px solid ${HAIRLINE}` }}
-              >
-                {/* Image */}
-                <div className="relative w-full aspect-square overflow-hidden bg-neutral-50">
-                  {c.image ? (
-                    <img
-                      src={c.image}
-                      alt={c.name}
-                      className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                  ) : (
-                    <div className="w-full h-full" style={{ background: LIGHT_PEACH }} />
-                  )}
-                </div>
-
-                {/* Label */}
-                <div className="px-1.5 py-1.5 text-center" style={{ borderTop: `1px solid ${HAIRLINE}` }}>
-                  <span
-                    className="text-[10.5px] font-bold tracking-wide leading-tight line-clamp-2"
-                    style={{ color: COFFEE, fontFamily: FONT_SANS }}
-                  >
-                    {c.name}
-                  </span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
+            {c.name}
+          </span>
+        </Link>
+      ))}
+    </div>
+  </section>
+)}
 
       {/* Intro / Featured collection — centered copy, up to 6 New Arrivals, CTA */}
       <section className="max-w-6xl mx-auto px-4 pt-16 pb-16 text-center">
