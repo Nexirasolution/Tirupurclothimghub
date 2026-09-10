@@ -212,7 +212,7 @@ export default function Navbar() {
                 <Search size={16} strokeWidth={1.5} />
               </button>
 
-              <Link
+              {/* <Link
                 href="/wishlist"
                 className="relative flex items-center justify-center w-10 h-10 rounded-full transition-colors"
                 style={{ color: COFFEE, border: `1px solid ${HAIRLINE}` }}
@@ -227,7 +227,7 @@ export default function Navbar() {
                     {wishlistCount > 9 ? '9+' : wishlistCount}
                   </span>
                 )}
-              </Link>
+              </Link> */}
 
               <Link
                 href="/cart"
