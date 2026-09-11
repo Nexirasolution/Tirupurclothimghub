@@ -53,10 +53,11 @@ export const PUT = requireAdmin(async (req, { params }) => {
     body.basePrice = Math.min(...body.variants.map((v) => v.price));
   }
 
-  // body already carries sizeChart / isReadyToShip when the admin form sends
-  // them — findOneAndUpdate persists whatever fields are present on body,
-  // so no extra handling is required here as long as the Product schema
-  // (models/Product.js) actually defines these two paths.
+  // body already carries sizeChart / isReadyToShip / sleeveOptions /
+  // zipOptions when the admin form sends them — findOneAndUpdate persists
+  // whatever fields are present on body, so no extra handling is required
+  // here as long as the Product schema (models/Product.js) actually
+  // defines these paths.
   const product = await Product.findOneAndUpdate(getFilter(params.id), body, { new: true });
   if (!product) return NextResponse.json({ error: 'Product not found' }, { status: 404 });
 

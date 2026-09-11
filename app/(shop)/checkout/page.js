@@ -165,6 +165,8 @@ export default function CheckoutPage() {
       productId: i.productId,
       variantId: i.variantId,
       size: i.size,
+      sleeveType: i.sleeveType || '',
+      zipType: i.zipType || '',
       qty: i.qty,
       isCombo: i.isCombo || false,
       comboId: i.comboId
@@ -334,7 +336,9 @@ export default function CheckoutPage() {
             <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
               {items.map((i, idx) => (
                 <div key={idx} className="flex justify-between text-sm py-1 gap-2" style={{ color: INK_SOFT }}>
-                  <span className="truncate">{i.name} ({i.color}/{i.size}) ×{i.qty}</span>
+                  <span className="truncate">
+                    {i.name} ({[i.color, i.size, i.sleeveType, i.zipType].filter(Boolean).join('/')}) ×{i.qty}
+                  </span>
                   <span className="shrink-0" style={{ color: INK }}>{formatINR(i.price * i.qty)}</span>
                 </div>
               ))}

@@ -159,9 +159,13 @@ export default function AdminOrdersPage() {
                             setModalItem({ item: r.item, image: r.image, categoryName: categoryName(r.category), productSku: r.product?.sku })
                           }
                           className="text-xs px-2 py-1 rounded-full bg-brand-ink/5 text-brand-ink/70 hover:bg-brand-magenta hover:text-white transition-colors"
-                          title={r.item.sku || r.item.name}
+                          title={[r.item.sku, r.item.sleeveType, r.item.zipType].filter(Boolean).join(' · ') || r.item.name}
                         >
-                          {r.item.name} x{r.item.qty}
+                          {r.item.name}
+                          {(r.item.sleeveType || r.item.zipType) && (
+                            <span className="opacity-70"> · {[r.item.sleeveType, r.item.zipType].filter(Boolean).join('/')}</span>
+                          )}
+                          {' '}x{r.item.qty}
                         </button>
                       ))}
                     </div>

@@ -35,6 +35,8 @@ export default function ProductPage() {
   const [activeVariant, setActiveVariant] = useState(null);
   const [activeImage, setActiveImage] = useState(0);
   const [activeSize, setActiveSize] = useState('');
+  const [activeSleeve, setActiveSleeve] = useState('');
+  const [activeZip, setActiveZip] = useState('');
   const [qty, setQty] = useState(1);
   const [wished, setWished] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -114,6 +116,8 @@ export default function ProductPage() {
 
   function handleAddToCart() {
     if (!activeSize) { toast.error('Please select a size'); return; }
+    if (product.sleeveOptions?.length && !activeSleeve) { toast.error('Please select a sleeve type'); return; }
+    if (product.zipOptions?.length && !activeZip) { toast.error('Please select a zip type'); return; }
     const stock = getSizeStock(activeVariant, activeSize);
     if (stock <= 0) { toast.error('This size is out of stock'); return; }
     if (qty > stock) {
@@ -130,6 +134,8 @@ export default function ProductPage() {
       image: activeVariant.images?.[0],
       color: activeVariant.color,
       size: activeSize,
+      sleeveType: activeSleeve,
+      zipType: activeZip,
       price: activeVariant.price,
       qty,
       stock,
@@ -138,6 +144,8 @@ export default function ProductPage() {
 
   function handleBuyNow() {
     if (!activeSize) { toast.error('Please select a size'); return; }
+    if (product.sleeveOptions?.length && !activeSleeve) { toast.error('Please select a sleeve type'); return; }
+    if (product.zipOptions?.length && !activeZip) { toast.error('Please select a zip type'); return; }
     const stock = getSizeStock(activeVariant, activeSize);
     if (stock <= 0) { toast.error('This size is out of stock'); return; }
     if (qty > stock) {
@@ -154,6 +162,8 @@ export default function ProductPage() {
       image: activeVariant.images?.[0],
       color: activeVariant.color,
       size: activeSize,
+      sleeveType: activeSleeve,
+      zipType: activeZip,
       price: activeVariant.price,
       qty,
       stock,
@@ -163,15 +173,17 @@ export default function ProductPage() {
 
   return (
     <div className={`${body.className} ${display.variable}`} style={{ background: PAPER }}>
-      <div className="max-w-5xl mx-auto px-5 sm:px-8 pt-8 sm:pt-16 pb-24 sm:pb-20">
+      <div className="max-w-5xl mx-auto px-5 sm:px-8 pt-4 sm:pt-16 pb-24 sm:pb-20">
 
         {/* Even two-column split, generous gap, no sticky spine or gallery
             chrome — the image and the details carry equal quiet weight. */}
-        <div className="grid sm:grid-cols-2 gap-10 sm:gap-16">
+        <div className="grid sm:grid-cols-2 gap-4 sm:gap-16">
 
           {/* ── Gallery ── */}
           <div className="sm:sticky sm:top-10 sm:self-start">
-            <div className="relative w-full aspect-[4/5] overflow-hidden" style={{ background: PEACH_WASH, borderRadius: '4px' }}>
+            {/* Mobile: fixed viewport-relative height so the fold clears the
+                gallery quickly. Desktop: original aspect-ratio box. */}
+            <div className="relative w-full h-[38vh] sm:h-auto sm:aspect-[4/5] overflow-hidden" style={{ background: PEACH_WASH, borderRadius: '4px' }}>
               {images[activeImage] && (
                 <Image
                   src={images[activeImage]}
@@ -211,9 +223,11 @@ export default function ProductPage() {
               )}
             </div>
 
-            {/* Thumbnails — a thin underline marks the active one instead of a ring/shadow */}
+            {/* Thumbnails — hidden on mobile to save above-the-fold space;
+                a thin underline marks the active one on desktop instead of
+                a ring/shadow */}
             {images.length > 1 && (
-              <div className="flex gap-3 mt-3">
+              <div className="hidden sm:flex gap-3 mt-3">
                 {images.map((img, i) => (
                   <button
                     key={i}
@@ -231,9 +245,10 @@ export default function ProductPage() {
               </div>
             )}
 
-            {/* Wishlist / share — a plain text row under the image, not floating
-                chrome on top of it */}
-            <div className="flex items-center gap-5 mt-4">
+            {/* Wishlist / share — hidden on mobile (sticky bar covers the
+                key actions there); a plain text row under the image on
+                desktop, not floating chrome on top of it */}
+            <div className="hidden sm:flex items-center gap-5 mt-4">
               <button
                 onClick={() => { setWished((w) => !w); toast.success(wished ? 'Removed from wishlist' : 'Added to wishlist'); }}
                 className="flex items-center gap-1.5 text-xs font-medium"
@@ -252,13 +267,13 @@ export default function ProductPage() {
           {/* ── Details ── */}
           <div className="flex flex-col">
             {product.category?.name && (
-              <p className="text-[11px] font-medium uppercase tracking-[0.18em] mb-2" style={{ color: PEACH }}>
+              <p className="text-[11px] font-medium uppercase tracking-[0.18em] mb-1.5 sm:mb-2" style={{ color: PEACH }}>
                 {product.category.name}
               </p>
             )}
 
             <h1
-              className={`${display.className} text-[26px] sm:text-[32px] leading-[1.15]`}
+              className={`${display.className} text-[20px] sm:text-[32px] leading-[1.15]`}
               style={{ color: INK, fontWeight: 400, letterSpacing: '-0.01em' }}
             >
               {product.name}
@@ -267,21 +282,21 @@ export default function ProductPage() {
             {/* Ready to Ship badge — highlighted, sits just under the title */}
             {product.isReadyToShip && (
               <span
-                className="inline-block mt-2.5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide w-fit"
+                className="inline-block mt-2 sm:mt-2.5 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide w-fit"
                 style={{ background: PEACH_WASH, color: PEACH, borderRadius: '4px' }}
               >
                 Ready to Ship
               </span>
             )}
 
-            <div className="flex items-center gap-1.5 mt-2.5 text-sm" style={{ color: INK_SOFT }}>
+            <div className="flex items-center gap-1.5 mt-1.5 sm:mt-2.5 text-sm" style={{ color: INK_SOFT }}>
               <Star size={13} strokeWidth={1.5} style={{ fill: PEACH, color: PEACH }} />
               <span style={{ color: INK }}>{product.rating?.toFixed?.(1) ?? product.rating}</span>
               <span>· {product.reviewCount} reviews</span>
             </div>
 
-            <div className="flex items-baseline gap-3 mt-6">
-              <span className={`${display.className} text-[26px]`} style={{ color: INK, fontWeight: 500 }}>
+            <div className="flex items-baseline gap-3 mt-3 sm:mt-6">
+              <span className={`${display.className} text-[22px] sm:text-[26px]`} style={{ color: INK, fontWeight: 500 }}>
                 {formatINR(activeVariant?.price)}
               </span>
               {activeVariant?.compareAtPrice > activeVariant?.price && (
@@ -296,13 +311,15 @@ export default function ProductPage() {
               )}
             </div>
 
+            {/* Fabric line — hidden on mobile above-the-fold view, still
+                shown on desktop where vertical space isn't at a premium */}
             {product.fabric && (
-              <p className="text-sm mt-3" style={{ color: INK_SOFT }}>
+              <p className="hidden sm:block text-sm mt-3" style={{ color: INK_SOFT }}>
                 Fabric <span style={{ color: INK }}>— {product.fabric}</span>
               </p>
             )}
 
-            <div className="mt-8 pt-8" style={{ borderTop: `1px solid ${LINE}` }}>
+            <div className="mt-4 pt-4 sm:mt-8 sm:pt-8" style={{ borderTop: `1px solid ${LINE}` }}>
               <ColorSizeSelector
                 variants={product.variants}
                 activeVariant={activeVariant}
@@ -312,10 +329,16 @@ export default function ProductPage() {
                 categoryType={product.category?.type}
                 sizeChartImages={sizeChartImages}
                 onViewSizeChart={() => { setSizeChartIndex(0); setSizeChartOpen(true); }}
+                sleeveOptions={product.sleeveOptions}
+                zipOptions={product.zipOptions}
+                activeSleeve={activeSleeve}
+                onSleeveChange={setActiveSleeve}
+                activeZip={activeZip}
+                onZipChange={setActiveZip}
               />
             </div>
 
-            <div className="flex items-center gap-4 mt-6">
+            <div className="flex items-center gap-4 mt-4 sm:mt-6">
               <p className="text-sm" style={{ color: INK_SOFT }}>Qty</p>
               <div className="flex items-center gap-4">
                 <button
@@ -364,7 +387,7 @@ export default function ProductPage() {
             </div>
 
             {product.description && (
-              <div className="mt-8 pt-8 text-sm leading-relaxed" style={{ color: INK_SOFT, borderTop: `1px solid ${LINE}` }}>
+              <div className="mt-6 pt-6 sm:mt-8 sm:pt-8 text-sm leading-relaxed" style={{ color: INK_SOFT, borderTop: `1px solid ${LINE}` }}>
                 <h3 className="text-[11px] font-medium uppercase tracking-[0.18em] mb-3" style={{ color: INK }}>
                   Description
                 </h3>

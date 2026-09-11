@@ -9,6 +9,8 @@ const OrderItemSchema = new mongoose.Schema(
     image: String,
     color: String,
     size: String,
+    sleeveType: { type: String, default: '' },
+    zipType: { type: String, default: '' },
     price: Number,
     qty: Number
   },

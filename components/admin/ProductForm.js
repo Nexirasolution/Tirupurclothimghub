@@ -15,7 +15,14 @@ const PAPER = '#FFFFFF';
 const DISABLED_BG = '#F7F2EC';
 
 function emptyVariant() {
-  return { color: '', colorHex: '#D9946A', images: [''], price: '', compareAtPrice: '', sizes: [{ size: '', stock: 0, sku: '' }] };
+  return {
+    color: '',
+    colorHex: '#D9946A',
+    images: [''],
+    price: '',
+    compareAtPrice: '',
+    sizes: [{ size: '', stock: 0, sku: '' }],
+  };
 }
 
 function normalizeSizeChart(value) {
@@ -144,10 +151,17 @@ export default function ProductForm({ initial, productId }) {
       name: '', slug: '', sku: '', description: '', category: '', fabric: '', tags: [],
       variants: [emptyVariant()],
       sizeChart: [],
+      sleeveOptions: [],
+      zipOptions: [],
       isBestSeller: false, isTopSeller: false, isActiveSeller: true, isFeatured: false, isActive: true,
       isReadyToShip: false,
     };
-    return { ...base, sizeChart: normalizeSizeChart(base.sizeChart) };
+    return {
+      ...base,
+      sizeChart: normalizeSizeChart(base.sizeChart),
+      sleeveOptions: base.sleeveOptions || [],
+      zipOptions: base.zipOptions || [],
+    };
   });
   const [saving, setSaving] = useState(false);
   const [sizeChartUploading, setSizeChartUploading] = useState(false);
@@ -158,6 +172,16 @@ export default function ProductForm({ initial, productId }) {
   }, []);
 
   function update(field, value) { setForm((f) => ({ ...f, [field]: value })); }
+
+  function toggleArrayValue(field, value) {
+    setForm((f) => {
+      const current = f[field] || [];
+      const next = current.includes(value)
+        ? current.filter((v) => v !== value)
+        : [...current, value];
+      return { ...f, [field]: next };
+    });
+  }
 
   function updateVariant(idx, field, value) {
     setForm((f) => { const v = [...f.variants]; v[idx] = { ...v[idx], [field]: value }; return { ...f, variants: v }; });
@@ -258,6 +282,8 @@ export default function ProductForm({ initial, productId }) {
     const payload = {
       ...form,
       sizeChart: form.sizeChart || [],
+      sleeveOptions: form.sleeveOptions || [],
+      zipOptions: form.zipOptions || [],
       variants: form.variants.map((v) => ({
         ...v,
         price: Number(v.price),
@@ -390,6 +416,49 @@ export default function ProductForm({ initial, productId }) {
               </button>
             </div>
             <input ref={sizeChartFileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleSizeChartFilesChange} />
+          </div>
+
+          {/* Sleeve/Zip options — product-level, not per-variant. Admin picks
+              which apply to this product; customers choose one of each on
+              the PDP before adding to cart. Leave both unchecked for products
+              where they don't apply (sarees, dupattas, jewellery, etc). */}
+          <div className="sm:col-span-2 grid sm:grid-cols-2 gap-4">
+            <div>
+              <label style={labelStyle}>
+                Sleeve Type Options <span style={{ fontWeight: '400', textTransform: 'none', letterSpacing: 0 }}>(optional)</span>
+              </label>
+              <div className="flex flex-wrap gap-3 mt-2">
+                {['Full Sleeve', 'Half Sleeve', 'Sleeveless'].map((opt) => (
+                  <label key={opt} className="flex items-center gap-1.5 text-sm cursor-pointer" style={{ color: INK, fontFamily: 'sans-serif' }}>
+                    <input
+                      type="checkbox"
+                      checked={(form.sleeveOptions || []).includes(opt)}
+                      onChange={() => toggleArrayValue('sleeveOptions', opt)}
+                      style={{ accentColor: PEACH, width: '15px', height: '15px' }}
+                    />
+                    {opt}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label style={labelStyle}>
+                Zip Type Options <span style={{ fontWeight: '400', textTransform: 'none', letterSpacing: 0 }}>(optional)</span>
+              </label>
+              <div className="flex flex-wrap gap-3 mt-2">
+                {['With Zip', 'Without Zip'].map((opt) => (
+                  <label key={opt} className="flex items-center gap-1.5 text-sm cursor-pointer" style={{ color: INK, fontFamily: 'sans-serif' }}>
+                    <input
+                      type="checkbox"
+                      checked={(form.zipOptions || []).includes(opt)}
+                      onChange={() => toggleArrayValue('zipOptions', opt)}
+                      style={{ accentColor: PEACH, width: '15px', height: '15px' }}
+                    />
+                    {opt}
+                  </label>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Toggles */}

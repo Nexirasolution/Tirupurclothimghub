@@ -21,6 +21,13 @@ export default function BulkAddProductsPage() {
   // Applies to every product created in this batch
   const [isReadyToShip, setIsReadyToShip] = useState(false);
 
+  // Optional garment attributes — product-level, multi-select. Applied to
+  // every product in this batch. Leave both unchecked for categories where
+  // these don't apply (sarees, dupattas, etc). Customers will pick one of
+  // each on the storefront PDP if any are checked here.
+  const [sleeveOptions, setSleeveOptions] = useState([]);
+  const [zipOptions, setZipOptions] = useState([]);
+
   // Optional — one or more shared size chart images applied to every
   // product in this batch. Leave empty to fall back to the category's
   // size chart instead.
@@ -60,6 +67,14 @@ export default function BulkAddProductsPage() {
     setManualSizeName('');
     setManualSizeStock('');
   }, [category, categories]);
+
+  function toggleSleeveOption(opt) {
+    setSleeveOptions((prev) => (prev.includes(opt) ? prev.filter((o) => o !== opt) : [...prev, opt]));
+  }
+
+  function toggleZipOption(opt) {
+    setZipOptions((prev) => (prev.includes(opt) ? prev.filter((o) => o !== opt) : [...prev, opt]));
+  }
 
   function handleFilesChange(e) {
     const selected = Array.from(e.target.files || []);
@@ -171,6 +186,8 @@ export default function BulkAddProductsPage() {
           images: imageUrls,
           isReadyToShip,
           sizeChart,
+          sleeveOptions,
+          zipOptions,
         }),
       });
 
@@ -281,6 +298,46 @@ export default function BulkAddProductsPage() {
             onChange={(e) => setFabric(e.target.value)}
             className="w-full px-3 py-2 text-sm rounded-lg border border-brand-ink/10 outline-none"
           />
+        </div>
+
+        {/* Sleeve Type / Zip Type — product-level, multi-select. Applied to
+            every product in this batch. Leave both unchecked for categories
+            where these don't apply (sarees, dupattas, etc). If any are
+            checked, customers must choose one of each on the storefront
+            before adding the product to cart. */}
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">Sleeve Type Options (optional)</label>
+            <div className="flex flex-wrap gap-3">
+              {['Full Sleeve', 'Half Sleeve', 'Sleeveless'].map((opt) => (
+                <label key={opt} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={sleeveOptions.includes(opt)}
+                    onChange={() => toggleSleeveOption(opt)}
+                    className="w-4 h-4"
+                  />
+                  {opt}
+                </label>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Zip Type Options (optional)</label>
+            <div className="flex flex-wrap gap-3">
+              {['With Zip', 'Without Zip'].map((opt) => (
+                <label key={opt} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={zipOptions.includes(opt)}
+                    onChange={() => toggleZipOption(opt)}
+                    className="w-4 h-4"
+                  />
+                  {opt}
+                </label>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Size chart — optional, shared across every product in this batch */}

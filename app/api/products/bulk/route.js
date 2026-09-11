@@ -10,7 +10,9 @@ import { requireAdmin } from '@/lib/apiAuth';
 //   category, skuPrefix, description, fabric,
 //   price, compareAtPrice, sizes: [{ size, stock }],
 //   images: [url, url, ...], tags,
-//   isReadyToShip, sizeChart: [url, url, ...]
+//   isReadyToShip, sizeChart: [url, url, ...],
+//   sleeveOptions: [ 'Full Sleeve' | 'Half Sleeve' | 'Sleeveless', ... ],
+//   zipOptions: [ 'With Zip' | 'Without Zip', ... ]
 // }
 // Creates ONE product per image.
 // - Title = auto-derived from the CATEGORY name + zero-padded number,
@@ -20,9 +22,12 @@ import { requireAdmin } from '@/lib/apiAuth';
 // - SKU = admin-typed short code + zero-padded number, e.g. "MT" -> MT001, MT002...
 //   (continues from the highest existing SKU with that code, globally,
 //   since SKU is a global-unique field)
-// - isReadyToShip / sizeChart, if provided, are applied identically to every
-//   product created in this batch. sizeChart is optional — if omitted, the
-//   storefront falls back to the category's own size chart images.
+// - isReadyToShip / sizeChart / sleeveOptions / zipOptions, if provided, are
+//   applied identically to every product created in this batch.
+//   sizeChart is optional — if omitted, the storefront falls back to the
+//   category's own size chart images. sleeveOptions/zipOptions are optional
+//   product-level attributes — if omitted, no sleeve/zip selector shows on
+//   the storefront for these products.
 export const POST = requireAdmin(async (req) => {
   try {
     await dbConnect();
@@ -40,6 +45,8 @@ export const POST = requireAdmin(async (req) => {
       tags = [],
       isReadyToShip = false,
       sizeChart = [],
+      sleeveOptions = [],
+      zipOptions = [],
     } = body;
 
     if (!category) {
@@ -66,6 +73,19 @@ export const POST = requireAdmin(async (req) => {
     const sizeChartImages = Array.isArray(sizeChart)
       ? sizeChart.filter(Boolean)
       : (sizeChart ? [sizeChart] : []);
+
+    // Validate sleeve/zip options against the schema's allowed enum values,
+    // so a bad value from a stale client can't silently fail product
+    // creation for the whole batch (Mongoose enum validation would reject
+    // the entire document otherwise).
+    const ALLOWED_SLEEVE = ['Full Sleeve', 'Half Sleeve', 'Sleeveless'];
+    const ALLOWED_ZIP = ['With Zip', 'Without Zip'];
+    const sleeveOptionsClean = Array.isArray(sleeveOptions)
+      ? sleeveOptions.filter((s) => ALLOWED_SLEEVE.includes(s))
+      : [];
+    const zipOptionsClean = Array.isArray(zipOptions)
+      ? zipOptions.filter((z) => ALLOWED_ZIP.includes(z))
+      : [];
 
     const cat = await Category.findById(category);
     if (!cat) return NextResponse.json({ error: 'Category not found' }, { status: 404 });
@@ -158,6 +178,8 @@ export const POST = requireAdmin(async (req) => {
           basePrice: Number(price),
           isReadyToShip: !!isReadyToShip,
           sizeChart: sizeChartImages,
+          sleeveOptions: sleeveOptionsClean,
+          zipOptions: zipOptionsClean,
         });
 
         created.push({ id: product._id, name: product.name, sku: product.sku });

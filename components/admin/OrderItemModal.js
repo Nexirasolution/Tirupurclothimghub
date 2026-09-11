@@ -48,6 +48,12 @@ export default function OrderItemModal({ item, image, categoryName, productSku, 
           )}
           <p><span style={{ color: INK_SOFT }}>Color:</span> {item.color || '—'}</p>
           <p><span style={{ color: INK_SOFT }}>Size:</span> {item.size || '—'}</p>
+          {item.sleeveType && (
+            <p><span style={{ color: INK_SOFT }}>Sleeve Type:</span> {item.sleeveType}</p>
+          )}
+          {item.zipType && (
+            <p><span style={{ color: INK_SOFT }}>Zip Type:</span> {item.zipType}</p>
+          )}
           <p><span style={{ color: INK_SOFT }}>Quantity ordered:</span> {item.qty}</p>
           <p><span style={{ color: INK_SOFT }}>Price:</span> {formatINR(item.price)} each</p>
           <p><span style={{ color: INK_SOFT }}>Subtotal:</span> {formatINR(item.price * item.qty)}</p>

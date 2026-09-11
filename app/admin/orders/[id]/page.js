@@ -96,7 +96,7 @@ export default function AdminOrderDetailPage() {
                   <span className="w-10 h-10 rounded-md bg-brand-ink/5 shrink-0" />
                 )}
                 <span>
-                  {item.name} ({item.color}/{item.size}) x{item.qty}
+                  {item.name} ({[item.color, item.size, item.sleeveType, item.zipType].filter(Boolean).join('/')}) x{item.qty}
                   {resolved.product?.sku && (
                     <span className="block text-xs text-brand-ink/50">Product SKU: {resolved.product.sku}</span>
                   )}

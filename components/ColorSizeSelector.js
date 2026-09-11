@@ -16,12 +16,20 @@ export default function ColorSizeSelector({
   categoryType,
   sizeChartImages,
   onViewSizeChart,
+  sleeveOptions,
+  activeSleeve,
+  onSleeveChange,
+  zipOptions,
+  activeZip,
+  onZipChange,
 }) {
   const isJewellery = categoryType === 'jewellery';
   const sizeStock = (size) => activeVariant?.sizes?.find((s) => s.size === size)?.stock ?? 0;
 
   const hasColors = variants?.some((v) => v.color && v.color.trim());
   const hasSizeChart = Array.isArray(sizeChartImages) && sizeChartImages.length > 0;
+  const hasSleeveOptions = Array.isArray(sleeveOptions) && sleeveOptions.length > 0;
+  const hasZipOptions = Array.isArray(zipOptions) && zipOptions.length > 0;
 
   return (
     <div className="space-y-6">
@@ -46,7 +54,6 @@ export default function ColorSizeSelector({
                   className="relative w-8 h-8 rounded-full transition-transform"
                   style={{
                     backgroundColor: v.colorHex || '#ccc',
-                    // boxShadow: isActive ? `0 0 0 2px ${PAPER}, 0 0 0 3.5px ${PEACH}` : `0 0 0 1px ${LINE}`,
                     transform: isActive ? 'scale(1.08)' : 'scale(1)',
                   }}
                 >
@@ -127,6 +134,63 @@ export default function ColorSizeSelector({
           </button>
         )}
       </div>
+
+      {/* Sleeve type selector — product-level, shown only if the admin
+          picked one or more allowed options for this product. */}
+      {hasSleeveOptions && (
+        <div>
+          <p className="text-sm mb-2.5" style={{ color: INK_SOFT }}>Sleeve Type</p>
+          <div className="flex gap-2 flex-wrap">
+            {sleeveOptions.map((opt) => {
+              const active = activeSleeve === opt;
+              return (
+                <button
+                  key={opt}
+                  onClick={() => onSleeveChange(opt)}
+                  className="h-[36px] px-3 text-sm font-medium transition-colors"
+                  style={{
+                    borderRadius: '4px',
+                    border: `1px solid ${active ? INK : LINE}`,
+                    background: active ? INK : PAPER,
+                    color: active ? PAPER : INK,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {opt}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Zip type selector — same pattern as sleeve type */}
+      {hasZipOptions && (
+        <div>
+          <p className="text-sm mb-2.5" style={{ color: INK_SOFT }}>Zip Type</p>
+          <div className="flex gap-2 flex-wrap">
+            {zipOptions.map((opt) => {
+              const active = activeZip === opt;
+              return (
+                <button
+                  key={opt}
+                  onClick={() => onZipChange(opt)}
+                  className="h-[36px] px-3 text-sm font-medium transition-colors"
+                  style={{
+                    borderRadius: '4px',
+                    border: `1px solid ${active ? INK : LINE}`,
+                    background: active ? INK : PAPER,
+                    color: active ? PAPER : INK,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {opt}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

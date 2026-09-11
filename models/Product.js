@@ -7,6 +7,7 @@ const VariantSchema = new mongoose.Schema(
     images: [{ type: String }],
     price: { type: Number, required: true },
     compareAtPrice: { type: Number, default: 0 },
+
     sizes: [
       {
         size: { type: String, required: true },
@@ -32,6 +33,14 @@ const ProductSchema = new mongoose.Schema(
     // One or more optional size chart images. If empty, the storefront
     // falls back to this product's category.sizeChart instead.
     sizeChart: [{ type: String }],
+
+    // Product-level (not per-variant) sleeve/zip options. Admin picks which
+    // of these apply to this product; if a product has any sleeveOptions,
+    // the customer must pick one on the PDP before adding to cart. Same
+    // for zipOptions. Products where these don't apply (sarees, dupattas,
+    // jewellery, etc) simply leave these empty and no selector is shown.
+    sleeveOptions: [{ type: String, enum: ['Full Sleeve', 'Half Sleeve', 'Sleeveless'] }],
+    zipOptions: [{ type: String, enum: ['With Zip', 'Without Zip'] }],
 
     // When true, the storefront shows a highlighted "Ready to Ship" badge
     // below the product title.

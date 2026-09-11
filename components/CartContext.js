@@ -41,6 +41,20 @@ function brandToast(message, opts = {}) {
     { ...toastBase, ...opts }
   );
 }
+
+// A cart/order line is unique per product+variant+size AND per sleeve/zip
+// selection now — e.g. the same size in "Full Sleeve" and "Half Sleeve"
+// are two separate lines, not merged into one.
+function sameLine(a, b) {
+  return (
+    a.productId === b.productId &&
+    a.variantId === b.variantId &&
+    a.size === b.size &&
+    a.comboId === b.comboId &&
+    (a.sleeveType || '') === (b.sleeveType || '') &&
+    (a.zipType || '') === (b.zipType || '')
+  );
+}
 // ───────────────────────────────────────────────────────────────
 
 export function CartProvider({ children }) {
@@ -64,13 +78,7 @@ export function CartProvider({ children }) {
     let clamped = false;
 
     setItems((prev) => {
-      const idx = prev.findIndex(
-        (i) =>
-          i.productId === item.productId &&
-          i.variantId === item.variantId &&
-          i.size === item.size &&
-          i.comboId === item.comboId
-      );
+      const idx = prev.findIndex((i) => sameLine(i, item));
 
       const stockLimit = typeof item.stock === 'number' ? item.stock : Infinity;
 
@@ -134,13 +142,7 @@ export function CartProvider({ children }) {
       let next = [...prev];
 
       for (const item of newItems) {
-        const idx = next.findIndex(
-          (i) =>
-            i.productId === item.productId &&
-            i.variantId === item.variantId &&
-            i.size === item.size &&
-            i.comboId === item.comboId
-        );
+        const idx = next.findIndex((i) => sameLine(i, item));
         const stockLimit = typeof item.stock === 'number' ? item.stock : Infinity;
 
         if (idx > -1) {
@@ -259,7 +261,7 @@ export function CartProvider({ children }) {
 }
 
 export function cartKey(i) {
-  return [i.productId, i.variantId, i.size, i.comboId].filter(Boolean).join('-');
+  return [i.productId, i.variantId, i.size, i.comboId, i.sleeveType, i.zipType].filter(Boolean).join('-');
 }
 
 export function useCart() {
