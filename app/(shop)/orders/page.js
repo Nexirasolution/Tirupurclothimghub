@@ -252,6 +252,9 @@ export default function OrdersPage() {
                   const reviewKey = `${o._id}-${it.product}`;
                   const alreadyReviewed = reviewedMap[o._id]?.has(String(it.product));
                   const canReview = o.status === 'delivered' && it.product && !it.isCombo;
+                  const variantLabel = [it.sleeveType, it.zipType, it.pantOption?.name, it.shawlOption?.name]
+                    .filter(Boolean)
+                    .join(' · ');
 
                   return (
                     <div key={i}>
@@ -261,7 +264,9 @@ export default function OrdersPage() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm truncate" style={{ color: INK }}>{it.name}</p>
-                          <p className="text-xs" style={{ color: INK_SOFT }}>Qty {it.qty}</p>
+                          <p className="text-xs" style={{ color: INK_SOFT }}>
+                            Qty {it.qty}{variantLabel ? ` · ${variantLabel}` : ''}
+                          </p>
                         </div>
                         {canReview && (
                           alreadyReviewed ? (

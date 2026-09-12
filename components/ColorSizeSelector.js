@@ -6,6 +6,80 @@ const INK_SOFT = '#9C877D';
 const PEACH = '#D9946A';
 const LINE = '#EEE3DA';
 const PAPER = '#FFFFFF';
+const PEACH_WASH = '#FBE8D9';
+
+function AddonSelector({ label, options, activeId, onChange, formatINR }) {
+  if (!options?.length) return null;
+  const active = options.find((o) => o._id === activeId);
+
+  return (
+    <div>
+      <p className="text-sm mb-2.5" style={{ color: INK_SOFT }}>{label}</p>
+      <div className="flex gap-2.5 flex-wrap">
+        {/* Explicit "None" choice — covers "without pant" / "without shawl" */}
+        <button
+          type="button"
+          onClick={() => onChange('')}
+          className="h-9 px-3 text-sm font-medium transition-colors"
+          style={{
+            borderRadius: '4px',
+            border: `1px solid ${!activeId ? INK : LINE}`,
+            background: !activeId ? INK : PAPER,
+            color: !activeId ? PAPER : INK,
+          }}
+        >
+          None
+        </button>
+
+        {options.map((opt) => {
+          const outOfStock = (opt.stock ?? 0) <= 0;
+          const isActive = activeId === opt._id;
+          return (
+            <button
+              key={opt._id}
+              type="button"
+              disabled={outOfStock}
+              onClick={() => onChange(opt._id)}
+              className="flex items-center gap-2 h-9 pl-1.5 pr-3 text-sm font-medium transition-colors"
+              style={{
+                borderRadius: '4px',
+                border: `1px solid ${outOfStock ? LINE : isActive ? INK : LINE}`,
+                background: isActive ? INK : PAPER,
+                color: outOfStock ? '#D6C9BE' : isActive ? PAPER : INK,
+                textDecoration: outOfStock ? 'line-through' : 'none',
+                cursor: outOfStock ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {opt.image && (
+                <span
+                  className="w-6 h-6 rounded-sm overflow-hidden shrink-0"
+                  style={{ background: PEACH_WASH }}
+                >
+                  <img src={opt.image} alt="" className="w-full h-full object-cover" />
+                </span>
+              )}
+              {opt.name}
+              {opt.price > 0 && (
+                <span style={{ opacity: 0.75 }}>+{formatINR(opt.price)}</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {active?.image && (
+        <div className="mt-2.5 w-16 h-16 rounded-md overflow-hidden" style={{ background: PEACH_WASH }}>
+          <img src={active.image} alt={active.name} className="w-full h-full object-cover" />
+        </div>
+      )}
+      {active && active.stock > 0 && active.stock <= 5 && (
+        <p className="mt-2 text-xs font-medium" style={{ color: PEACH }}>
+          Only {active.stock} left in stock
+        </p>
+      )}
+    </div>
+  );
+}
 
 export default function ColorSizeSelector({
   variants,
@@ -22,6 +96,13 @@ export default function ColorSizeSelector({
   zipOptions,
   activeZip,
   onZipChange,
+  pantOptions,
+  activePantId,
+  onPantChange,
+  shawlOptions,
+  activeShawlId,
+  onShawlChange,
+  formatINR,
 }) {
   const isJewellery = categoryType === 'jewellery';
   const sizeStock = (size) => activeVariant?.sizes?.find((s) => s.size === size)?.stock ?? 0;
@@ -191,6 +272,25 @@ export default function ColorSizeSelector({
           </div>
         </div>
       )}
+
+      {/* Pant selector — optional product-level add-on. "None" covers
+          "without pant". Price shown is added on top of the base price. */}
+      <AddonSelector
+        label="Pant"
+        options={pantOptions}
+        activeId={activePantId}
+        onChange={onPantChange}
+        formatINR={formatINR}
+      />
+
+      {/* Shawl selector — same pattern as Pant */}
+      <AddonSelector
+        label="Shawl"
+        options={shawlOptions}
+        activeId={activeShawlId}
+        onChange={onShawlChange}
+        formatINR={formatINR}
+      />
     </div>
   );
 }

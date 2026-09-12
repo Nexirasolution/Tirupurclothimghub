@@ -138,7 +138,8 @@ export const POST = requireAdmin(async (req) => {
       : body.basePrice || 0;
 
     // body already carries sizeChart / isReadyToShip / sleeveOptions /
-    // zipOptions when the admin form sends them — no extra handling needed here.
+    // zipOptions / pantOptions / shawlOptions when the admin form sends
+    // them — no extra handling needed here, they're embedded subdocuments.
     const product = await Product.create({ ...body, slug, sku, basePrice });
     return NextResponse.json({ product }, { status: 201 });
   } catch (err) {

@@ -220,6 +220,7 @@ export default function BulkAddProductsPage() {
       <p className="text-sm text-brand-ink/50 mb-6">
         One category, description, and fabric applied to every product. Each image you upload becomes
         its own product — titles are generated automatically from the category, and SKUs from the code below.
+        Pant/Shawl add-on options can be set afterward from each product's own edit page.
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-5">
@@ -309,7 +310,7 @@ export default function BulkAddProductsPage() {
           <div>
             <label className="block text-sm font-medium mb-2">Sleeve Type Options (optional)</label>
             <div className="flex flex-wrap gap-3">
-              {['Full Sleeve', 'Half Sleeve', 'Sleeveless'].map((opt) => (
+              {['Full Sleeve', 'Half Sleeve', 'Elbow Sleeve', 'Sleeveless'].map((opt) => (
                 <label key={opt} className="flex items-center gap-1.5 text-sm cursor-pointer">
                   <input
                     type="checkbox"

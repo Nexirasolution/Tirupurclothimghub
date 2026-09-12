@@ -25,6 +25,10 @@ function emptyVariant() {
   };
 }
 
+function emptyAddonOption() {
+  return { name: '', image: '', price: '', stock: '', sku: '' };
+}
+
 function normalizeSizeChart(value) {
   if (Array.isArray(value)) return value;
   if (value) return [value]; // backward-compat with the old single-string field
@@ -143,6 +147,96 @@ function ImageSlot({ value, onChange, onRemove, showRemove }) {
   );
 }
 
+// Reusable editor for a list of named add-on options (pants / shawls).
+// Each option gets its own image, extra price (added on top of the
+// variant price when a customer picks it), stock, and optional SKU.
+function AddonOptionsEditor({ title, options, onAdd, onUpdate, onRemove }) {
+  return (
+    <div style={cardStyle}>
+      <div className="flex items-center justify-between mb-3">
+        <p style={{ ...sectionHeadStyle, marginBottom: 0 }}>{title}</p>
+        <button
+          type="button"
+          onClick={onAdd}
+          className="flex items-center gap-1 text-sm font-medium px-3 py-1.5"
+          style={{
+            background: PAPER,
+            color: PEACH,
+            border: `1px solid ${PEACH}`,
+            borderRadius: '4px',
+            fontFamily: 'sans-serif',
+            cursor: 'pointer',
+          }}
+        >
+          <Plus size={14} /> Add {title.replace(/s$/, '')}
+        </button>
+      </div>
+      <p style={{ fontSize: '12px', color: INK_SOFT, fontFamily: 'sans-serif', marginBottom: options.length ? '12px' : 0 }}>
+        Leave empty if {title.toLowerCase()} don't apply to this product. The price entered is ADDED
+        on top of the variant price when a customer selects it. Customers can also choose "None".
+      </p>
+
+      {options.map((opt, idx) => (
+        <div
+          key={idx}
+          className="flex flex-col sm:flex-row sm:items-start gap-3 mb-3 pb-3"
+          style={{ borderBottom: idx < options.length - 1 ? `1px solid ${LINE}` : 'none' }}
+        >
+          <ImageSlot
+            value={opt.image}
+            onChange={(url) => onUpdate(idx, 'image', url)}
+            onRemove={() => onUpdate(idx, 'image', '')}
+            showRemove={!!opt.image}
+          />
+          <div className="grid sm:grid-cols-4 gap-2 flex-1">
+            <input
+              placeholder="Name (e.g. Cotton Palazzo)"
+              style={{ ...inputStyle, marginTop: 0 }}
+              value={opt.name}
+              onChange={(e) => onUpdate(idx, 'name', e.target.value)}
+              onFocus={(e) => (e.target.style.borderColor = PEACH)}
+              onBlur={(e) => (e.target.style.borderColor = LINE)}
+            />
+            <input
+              type="number"
+              placeholder="Extra price ₹"
+              style={{ ...inputStyle, marginTop: 0 }}
+              value={opt.price}
+              onChange={(e) => onUpdate(idx, 'price', e.target.value)}
+              onFocus={(e) => (e.target.style.borderColor = PEACH)}
+              onBlur={(e) => (e.target.style.borderColor = LINE)}
+            />
+            <input
+              type="number"
+              placeholder="Stock"
+              style={{ ...inputStyle, marginTop: 0 }}
+              value={opt.stock}
+              onChange={(e) => onUpdate(idx, 'stock', e.target.value)}
+              onFocus={(e) => (e.target.style.borderColor = PEACH)}
+              onBlur={(e) => (e.target.style.borderColor = LINE)}
+            />
+            <input
+              placeholder="SKU (optional)"
+              style={{ ...inputStyle, marginTop: 0 }}
+              value={opt.sku}
+              onChange={(e) => onUpdate(idx, 'sku', e.target.value)}
+              onFocus={(e) => (e.target.style.borderColor = PEACH)}
+              onBlur={(e) => (e.target.style.borderColor = LINE)}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => onRemove(idx)}
+            style={{ color: INK_SOFT, cursor: 'pointer', flexShrink: 0, marginTop: '12px' }}
+          >
+            <Trash2 size={16} />
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function ProductForm({ initial, productId }) {
   const router = useRouter();
   const [categories, setCategories] = useState([]);
@@ -153,6 +247,8 @@ export default function ProductForm({ initial, productId }) {
       sizeChart: [],
       sleeveOptions: [],
       zipOptions: [],
+      pantOptions: [],
+      shawlOptions: [],
       isBestSeller: false, isTopSeller: false, isActiveSeller: true, isFeatured: false, isActive: true,
       isReadyToShip: false,
     };
@@ -161,6 +257,8 @@ export default function ProductForm({ initial, productId }) {
       sizeChart: normalizeSizeChart(base.sizeChart),
       sleeveOptions: base.sleeveOptions || [],
       zipOptions: base.zipOptions || [],
+      pantOptions: (base.pantOptions || []).map((o) => ({ ...o })),
+      shawlOptions: (base.shawlOptions || []).map((o) => ({ ...o })),
     };
   });
   const [saving, setSaving] = useState(false);
@@ -243,6 +341,21 @@ export default function ProductForm({ initial, productId }) {
   function addVariant() { setForm((f) => ({ ...f, variants: [...f.variants, emptyVariant()] })); }
   function removeVariant(idx) { setForm((f) => ({ ...f, variants: f.variants.filter((_, i) => i !== idx) })); }
 
+  // Pant / Shawl option list handlers — same shape, different field name.
+  function addAddonOption(field) {
+    setForm((f) => ({ ...f, [field]: [...(f[field] || []), emptyAddonOption()] }));
+  }
+  function updateAddonOption(field, idx, key, value) {
+    setForm((f) => {
+      const list = [...(f[field] || [])];
+      list[idx] = { ...list[idx], [key]: value };
+      return { ...f, [field]: list };
+    });
+  }
+  function removeAddonOption(field, idx) {
+    setForm((f) => ({ ...f, [field]: (f[field] || []).filter((_, i) => i !== idx) }));
+  }
+
   // Size chart — supports multiple images. Selecting several files at once
   // uploads each in turn and appends every resulting URL to the array.
   async function handleSizeChartFilesChange(e) {
@@ -284,6 +397,24 @@ export default function ProductForm({ initial, productId }) {
       sizeChart: form.sizeChart || [],
       sleeveOptions: form.sleeveOptions || [],
       zipOptions: form.zipOptions || [],
+      pantOptions: (form.pantOptions || [])
+        .filter((o) => o.name?.trim())
+        .map((o) => ({
+          name: o.name.trim(),
+          image: o.image || '',
+          price: Number(o.price) || 0,
+          stock: Number(o.stock) || 0,
+          sku: o.sku || '',
+        })),
+      shawlOptions: (form.shawlOptions || [])
+        .filter((o) => o.name?.trim())
+        .map((o) => ({
+          name: o.name.trim(),
+          image: o.image || '',
+          price: Number(o.price) || 0,
+          stock: Number(o.stock) || 0,
+          sku: o.sku || '',
+        })),
       variants: form.variants.map((v) => ({
         ...v,
         price: Number(v.price),
@@ -428,7 +559,7 @@ export default function ProductForm({ initial, productId }) {
                 Sleeve Type Options <span style={{ fontWeight: '400', textTransform: 'none', letterSpacing: 0 }}>(optional)</span>
               </label>
               <div className="flex flex-wrap gap-3 mt-2">
-                {['Full Sleeve', 'Half Sleeve', 'Sleeveless'].map((opt) => (
+                {['Full Sleeve', 'Half Sleeve', 'Elbow Sleeve', 'Sleeveless'].map((opt) => (
                   <label key={opt} className="flex items-center gap-1.5 text-sm cursor-pointer" style={{ color: INK, fontFamily: 'sans-serif' }}>
                     <input
                       type="checkbox"
@@ -643,6 +774,24 @@ export default function ProductForm({ initial, productId }) {
           </div>
         ))}
       </div>
+
+      {/* Pant Options — optional, product-level, admin can add any number */}
+      <AddonOptionsEditor
+        title="Pant Options"
+        options={form.pantOptions}
+        onAdd={() => addAddonOption('pantOptions')}
+        onUpdate={(idx, key, value) => updateAddonOption('pantOptions', idx, key, value)}
+        onRemove={(idx) => removeAddonOption('pantOptions', idx)}
+      />
+
+      {/* Shawl Options — optional, product-level, admin can add any number */}
+      <AddonOptionsEditor
+        title="Shawl Options"
+        options={form.shawlOptions}
+        onAdd={() => addAddonOption('shawlOptions')}
+        onUpdate={(idx, key, value) => updateAddonOption('shawlOptions', idx, key, value)}
+        onRemove={(idx) => removeAddonOption('shawlOptions', idx)}
+      />
 
       {/* Submit button */}
       <button

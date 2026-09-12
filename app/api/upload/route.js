@@ -1,10 +1,14 @@
-import { v2 as cloudinary } from 'cloudinary';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { NextResponse } from 'next/server';
+import { randomUUID } from 'crypto';
 
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key:    process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
+const s3 = new S3Client({
+  region: 'auto',
+  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+  },
 });
 
 export async function POST(req) {
@@ -16,12 +20,20 @@ export async function POST(req) {
 
   const buffer = Buffer.from(await file.arrayBuffer());
 
-  const result = await new Promise((resolve, reject) => {
-    cloudinary.uploader.upload_stream(
-      { folder, resource_type: 'auto' },   // 'auto' handles both image and video
-      (err, res) => (err ? reject(err) : resolve(res))
-    ).end(buffer);
-  });
+  // Build a unique key, preserving folder structure + original extension
+  const ext = file.name?.includes('.') ? file.name.split('.').pop() : '';
+  const key = `${folder}/${randomUUID()}${ext ? '.' + ext : ''}`;
 
-  return NextResponse.json({ url: result.secure_url });
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: process.env.R2_BUCKET_NAME,
+      Key: key,
+      Body: buffer,
+      ContentType: file.type || 'application/octet-stream',
+    })
+  );
+
+  const url = `${process.env.R2_PUBLIC_URL}/${key}`;
+
+  return NextResponse.json({ url });
 }

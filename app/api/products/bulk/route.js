@@ -11,7 +11,7 @@ import { requireAdmin } from '@/lib/apiAuth';
 //   price, compareAtPrice, sizes: [{ size, stock }],
 //   images: [url, url, ...], tags,
 //   isReadyToShip, sizeChart: [url, url, ...],
-//   sleeveOptions: [ 'Full Sleeve' | 'Half Sleeve' | 'Sleeveless', ... ],
+//   sleeveOptions: [ 'Full Sleeve' | 'Half Sleeve' | 'Elbow Sleeve' | 'Sleeveless', ... ],
 //   zipOptions: [ 'With Zip' | 'Without Zip', ... ]
 // }
 // Creates ONE product per image.
@@ -28,6 +28,8 @@ import { requireAdmin } from '@/lib/apiAuth';
 //   category's own size chart images. sleeveOptions/zipOptions are optional
 //   product-level attributes — if omitted, no sleeve/zip selector shows on
 //   the storefront for these products.
+//   Pant/Shawl add-on options aren't set here (they're per-product) — set
+//   them afterward on each product's own edit page.
 export const POST = requireAdmin(async (req) => {
   try {
     await dbConnect();
@@ -78,7 +80,7 @@ export const POST = requireAdmin(async (req) => {
     // so a bad value from a stale client can't silently fail product
     // creation for the whole batch (Mongoose enum validation would reject
     // the entire document otherwise).
-    const ALLOWED_SLEEVE = ['Full Sleeve', 'Half Sleeve', 'Sleeveless'];
+    const ALLOWED_SLEEVE = ['Full Sleeve', 'Half Sleeve', 'Elbow Sleeve', 'Sleeveless'];
     const ALLOWED_ZIP = ['With Zip', 'Without Zip'];
     const sleeveOptionsClean = Array.isArray(sleeveOptions)
       ? sleeveOptions.filter((s) => ALLOWED_SLEEVE.includes(s))

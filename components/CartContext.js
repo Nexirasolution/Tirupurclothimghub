@@ -42,9 +42,9 @@ function brandToast(message, opts = {}) {
   );
 }
 
-// A cart/order line is unique per product+variant+size AND per sleeve/zip
-// selection now — e.g. the same size in "Full Sleeve" and "Half Sleeve"
-// are two separate lines, not merged into one.
+// A cart/order line is unique per product+variant+size AND per sleeve/zip/
+// pant/shawl selection now — e.g. the same size in "Full Sleeve" and "Half
+// Sleeve", or with vs without a pant add-on, are separate lines, not merged.
 function sameLine(a, b) {
   return (
     a.productId === b.productId &&
@@ -52,7 +52,9 @@ function sameLine(a, b) {
     a.size === b.size &&
     a.comboId === b.comboId &&
     (a.sleeveType || '') === (b.sleeveType || '') &&
-    (a.zipType || '') === (b.zipType || '')
+    (a.zipType || '') === (b.zipType || '') &&
+    (a.pantOption?.id || '') === (b.pantOption?.id || '') &&
+    (a.shawlOption?.id || '') === (b.shawlOption?.id || '')
   );
 }
 // ───────────────────────────────────────────────────────────────
@@ -261,7 +263,16 @@ export function CartProvider({ children }) {
 }
 
 export function cartKey(i) {
-  return [i.productId, i.variantId, i.size, i.comboId, i.sleeveType, i.zipType].filter(Boolean).join('-');
+  return [
+    i.productId,
+    i.variantId,
+    i.size,
+    i.comboId,
+    i.sleeveType,
+    i.zipType,
+    i.pantOption?.id,
+    i.shawlOption?.id,
+  ].filter(Boolean).join('-');
 }
 
 export function useCart() {

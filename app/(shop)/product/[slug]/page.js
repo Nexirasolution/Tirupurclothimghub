@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { Fraunces, Inter } from 'next/font/google';
 import { Star, ShoppingBag, Zap, Heart, Share2, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { formatINR } from '@/lib/utils';
-import { getSizeStock } from '@/lib/stock';
+import { getSizeStock, getCombinedStock } from '@/lib/stock';
 import { useCart } from '@/components/CartContext';
 import ColorSizeSelector from '@/components/ColorSizeSelector';
 import ProductCard from '@/components/ProductCard';
@@ -37,6 +37,8 @@ export default function ProductPage() {
   const [activeSize, setActiveSize] = useState('');
   const [activeSleeve, setActiveSleeve] = useState('');
   const [activeZip, setActiveZip] = useState('');
+  const [activePantId, setActivePantId] = useState('');
+  const [activeShawlId, setActiveShawlId] = useState('');
   const [qty, setQty] = useState(1);
   const [wished, setWished] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -86,6 +88,24 @@ export default function ProductPage() {
   const selectedSizeStock = getSizeStock(activeVariant, activeSize);
   const sizeOutOfStock = !!activeSize && selectedSizeStock <= 0;
 
+  // Pant/shawl selections and the combined, add-on-inclusive unit price.
+  const selectedPant = product.pantOptions?.find((p) => p._id === activePantId) || null;
+  const selectedShawl = product.shawlOptions?.find((s) => s._id === activeShawlId) || null;
+  const addonTotal = (selectedPant?.price || 0) + (selectedShawl?.price || 0);
+  const unitPrice = (activeVariant?.price || 0) + addonTotal;
+  const unitCompareAtPrice = activeVariant?.compareAtPrice > activeVariant?.price
+    ? activeVariant.compareAtPrice + addonTotal
+    : 0;
+
+  function stockCap() {
+    return getCombinedStock(activeVariant, activeSize, {
+      pantOptions: product.pantOptions,
+      pantOptionId: activePantId,
+      shawlOptions: product.shawlOptions,
+      shawlOptionId: activeShawlId,
+    });
+  }
+
   function prevImage() { setActiveImage((i) => (i === 0 ? images.length - 1 : i - 1)); }
   function nextImage() { setActiveImage((i) => (i === images.length - 1 ? 0 : i + 1)); }
 
@@ -110,64 +130,89 @@ export default function ProductPage() {
 
   function handleSizeChange(size) {
     setActiveSize(size);
-    const stock = getSizeStock(activeVariant, size);
-    setQty((q) => (stock > 0 ? Math.min(q, stock) : 1));
+    const stock = getCombinedStock(activeVariant, size, {
+      pantOptions: product.pantOptions,
+      pantOptionId: activePantId,
+      shawlOptions: product.shawlOptions,
+      shawlOptionId: activeShawlId,
+    });
+    setQty((q) => (stock > 0 && stock !== Infinity ? Math.min(q, stock) : 1));
+  }
+
+  function handlePantChange(id) {
+    setActivePantId(id);
+    const stock = getCombinedStock(activeVariant, activeSize, {
+      pantOptions: product.pantOptions,
+      pantOptionId: id,
+      shawlOptions: product.shawlOptions,
+      shawlOptionId: activeShawlId,
+    });
+    if (stock !== Infinity) setQty((q) => Math.min(q, Math.max(stock, 1)));
+  }
+
+  function handleShawlChange(id) {
+    setActiveShawlId(id);
+    const stock = getCombinedStock(activeVariant, activeSize, {
+      pantOptions: product.pantOptions,
+      pantOptionId: activePantId,
+      shawlOptions: product.shawlOptions,
+      shawlOptionId: id,
+    });
+    if (stock !== Infinity) setQty((q) => Math.min(q, Math.max(stock, 1)));
+  }
+
+  function buildCartPayload() {
+    const stock = stockCap();
+    return {
+      productId: product._id,
+      variantId: activeVariant._id,
+      comboId: null,
+      name: product.name,
+      image: activeVariant.images?.[0],
+      color: activeVariant.color,
+      size: activeSize,
+      sleeveType: activeSleeve,
+      zipType: activeZip,
+      pantOption: selectedPant
+        ? { id: selectedPant._id, name: selectedPant.name, price: selectedPant.price, image: selectedPant.image, sku: selectedPant.sku }
+        : null,
+      shawlOption: selectedShawl
+        ? { id: selectedShawl._id, name: selectedShawl.name, price: selectedShawl.price, image: selectedShawl.image, sku: selectedShawl.sku }
+        : null,
+      price: unitPrice,
+      qty,
+      stock,
+    };
   }
 
   function handleAddToCart() {
     if (!activeSize) { toast.error('Please select a size'); return; }
     if (product.sleeveOptions?.length && !activeSleeve) { toast.error('Please select a sleeve type'); return; }
     if (product.zipOptions?.length && !activeZip) { toast.error('Please select a zip type'); return; }
-    const stock = getSizeStock(activeVariant, activeSize);
-    if (stock <= 0) { toast.error('This size is out of stock'); return; }
+    const stock = stockCap();
+    if (stock <= 0) { toast.error('This combination is out of stock'); return; }
     if (qty > stock) {
       toast.error(`Only ${stock} left in stock`);
       setQty(stock);
       return;
     }
 
-    addItem({
-      productId: product._id,
-      variantId: activeVariant._id,
-      comboId: null,
-      name: product.name,
-      image: activeVariant.images?.[0],
-      color: activeVariant.color,
-      size: activeSize,
-      sleeveType: activeSleeve,
-      zipType: activeZip,
-      price: activeVariant.price,
-      qty,
-      stock,
-    });
+    addItem(buildCartPayload());
   }
 
   function handleBuyNow() {
     if (!activeSize) { toast.error('Please select a size'); return; }
     if (product.sleeveOptions?.length && !activeSleeve) { toast.error('Please select a sleeve type'); return; }
     if (product.zipOptions?.length && !activeZip) { toast.error('Please select a zip type'); return; }
-    const stock = getSizeStock(activeVariant, activeSize);
-    if (stock <= 0) { toast.error('This size is out of stock'); return; }
+    const stock = stockCap();
+    if (stock <= 0) { toast.error('This combination is out of stock'); return; }
     if (qty > stock) {
       toast.error(`Only ${stock} left in stock`);
       setQty(stock);
       return;
     }
 
-    addItem({
-      productId: product._id,
-      variantId: activeVariant._id,
-      comboId: null,
-      name: product.name,
-      image: activeVariant.images?.[0],
-      color: activeVariant.color,
-      size: activeSize,
-      sleeveType: activeSleeve,
-      zipType: activeZip,
-      price: activeVariant.price,
-      qty,
-      stock,
-    });
+    addItem(buildCartPayload());
     router.push('/checkout');
   }
 
@@ -295,13 +340,16 @@ export default function ProductPage() {
               <span>· {product.reviewCount} reviews</span>
             </div>
 
+            {/* Price now reflects the base variant price PLUS whichever
+                pant/shawl add-ons are currently selected, so it updates
+                live as the customer changes those selectors below. */}
             <div className="flex items-baseline gap-3 mt-3 sm:mt-6">
               <span className={`${display.className} text-[22px] sm:text-[26px]`} style={{ color: INK, fontWeight: 500 }}>
-                {formatINR(activeVariant?.price)}
+                {formatINR(unitPrice)}
               </span>
-              {activeVariant?.compareAtPrice > activeVariant?.price && (
+              {unitCompareAtPrice > unitPrice && (
                 <span className="line-through text-sm" style={{ color: NEUTRAL }}>
-                  {formatINR(activeVariant.compareAtPrice)}
+                  {formatINR(unitCompareAtPrice)}
                 </span>
               )}
               {discount > 0 && (
@@ -310,6 +358,11 @@ export default function ProductPage() {
                 </span>
               )}
             </div>
+            {addonTotal > 0 && (
+              <p className="text-xs mt-1" style={{ color: INK_SOFT }}>
+                Includes {formatINR(addonTotal)} for selected add-ons
+              </p>
+            )}
 
             {/* Fabric line — hidden on mobile above-the-fold view, still
                 shown on desktop where vertical space isn't at a premium */}
@@ -335,6 +388,13 @@ export default function ProductPage() {
                 onSleeveChange={setActiveSleeve}
                 activeZip={activeZip}
                 onZipChange={setActiveZip}
+                pantOptions={product.pantOptions}
+                activePantId={activePantId}
+                onPantChange={handlePantChange}
+                shawlOptions={product.shawlOptions}
+                activeShawlId={activeShawlId}
+                onShawlChange={handleShawlChange}
+                formatINR={formatINR}
               />
             </div>
 
@@ -350,17 +410,23 @@ export default function ProductPage() {
                 </button>
                 <span className="text-sm font-medium w-4 text-center" style={{ color: INK }}>{qty}</span>
                 <button
-                  onClick={() => setQty((q) => (selectedSizeStock > 0 ? Math.min(selectedSizeStock, q + 1) : q + 1))}
-                  disabled={!!activeSize && qty >= selectedSizeStock}
+                  onClick={() => setQty((q) => {
+                    const cap = stockCap();
+                    return cap > 0 && cap !== Infinity ? Math.min(cap, q + 1) : q + 1;
+                  })}
+                  disabled={(() => { const cap = stockCap(); return !!activeSize && cap !== Infinity && qty >= cap; })()}
                   className="text-base leading-none disabled:opacity-30 disabled:cursor-not-allowed"
                   style={{ color: INK }}
                 >
                   +
                 </button>
               </div>
-              {!!activeSize && selectedSizeStock > 0 && selectedSizeStock <= 5 && (
-                <span className="text-xs" style={{ color: PEACH }}>Only {selectedSizeStock} left</span>
-              )}
+              {(() => {
+                const cap = stockCap();
+                return !!activeSize && cap !== Infinity && cap > 0 && cap <= 5 && (
+                  <span className="text-xs" style={{ color: PEACH }}>Only {cap} left</span>
+                );
+              })()}
               {sizeOutOfStock && (
                 <span className="text-xs" style={{ color: INK_SOFT }}>Out of stock</span>
               )}
@@ -465,11 +531,11 @@ export default function ProductPage() {
         >
           <div className="shrink-0">
             <p className="text-base font-medium leading-none" style={{ color: INK }}>
-              {formatINR(activeVariant?.price)}
+              {formatINR(unitPrice)}
             </p>
-            {activeVariant?.compareAtPrice > activeVariant?.price && (
+            {unitCompareAtPrice > unitPrice && (
               <p className="text-[11px] line-through leading-none mt-1" style={{ color: NEUTRAL }}>
-                {formatINR(activeVariant.compareAtPrice)}
+                {formatINR(unitCompareAtPrice)}
               </p>
             )}
           </div>

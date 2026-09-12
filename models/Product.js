@@ -19,6 +19,20 @@ const VariantSchema = new mongoose.Schema(
   { _id: true }
 );
 
+// A single named add-on option (e.g. "Cotton Palazzo", "Bandhani Shawl").
+// `price` is an ADDITIONAL amount added on top of the variant price when
+// this option is picked — not a standalone price.
+const AddonOptionSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true, trim: true },
+    image: { type: String, default: '' },
+    price: { type: Number, default: 0 },
+    stock: { type: Number, default: 0 },
+    sku: { type: String, default: '' }
+  },
+  { _id: true }
+);
+
 const ProductSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
@@ -39,8 +53,15 @@ const ProductSchema = new mongoose.Schema(
     // the customer must pick one on the PDP before adding to cart. Same
     // for zipOptions. Products where these don't apply (sarees, dupattas,
     // jewellery, etc) simply leave these empty and no selector is shown.
-    sleeveOptions: [{ type: String, enum: ['Full Sleeve', 'Half Sleeve', 'Sleeveless'] }],
+    sleeveOptions: [{ type: String, enum: ['Full Sleeve', 'Half Sleeve', 'Elbow Sleeve', 'Sleeveless'] }],
     zipOptions: [{ type: String, enum: ['With Zip', 'Without Zip'] }],
+
+    // Optional add-ons — admin can add any number of named pant/shawl
+    // options, each with its own image, extra price, and stock. Customer
+    // picks at most one of each (or none, i.e. "without pant"/"without
+    // shawl"). Empty array = no selector shown on the storefront.
+    pantOptions: [AddonOptionSchema],
+    shawlOptions: [AddonOptionSchema],
 
     // When true, the storefront shows a highlighted "Ready to Ship" badge
     // below the product title.

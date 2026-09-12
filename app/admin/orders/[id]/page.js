@@ -16,7 +16,7 @@ export default function AdminOrderDetailPage() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [courier, setCourier] = useState({ partner: '', trackingId: '', awbNumber: '' });
-  const [modalItem, setModalItem] = useState(null); // { item, image, categoryName }
+  const [modalItem, setModalItem] = useState(null); // { item, image, categoryName, productSku }
   const [notFound, setNotFound] = useState(false);
 
   async function load() {
@@ -96,7 +96,7 @@ export default function AdminOrderDetailPage() {
                   <span className="w-10 h-10 rounded-md bg-brand-ink/5 shrink-0" />
                 )}
                 <span>
-                  {item.name} ({[item.color, item.size, item.sleeveType, item.zipType].filter(Boolean).join('/')}) x{item.qty}
+                  {item.name} ({[item.color, item.size, item.sleeveType, item.zipType, item.pantOption?.name, item.shawlOption?.name].filter(Boolean).join('/')}) x{item.qty}
                   {resolved.product?.sku && (
                     <span className="block text-xs text-brand-ink/50">Product SKU: {resolved.product.sku}</span>
                   )}
