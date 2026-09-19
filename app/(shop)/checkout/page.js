@@ -174,9 +174,12 @@ export default function CheckoutPage() {
 
     try {
       if (paymentMethod === 'razorpay') {
-        // Server recomputes and verifies the total from orderItems, and
-        // stashes the order payload so the webhook can create the order
-        // even if this tab closes before the handler below runs.
+        // Server recomputes the total from orderItems and stashes the order
+        // payload so the webhook can create the order even if this tab
+        // closes before the handler below runs.
+        // `expectedTotal` is only a safety check: if the server's total
+        // differs from what the customer saw, the server answers 409 and
+        // the Razorpay popup never opens with a wrong amount.
         const orderRes = await fetch('/api/payment/create-order', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -184,11 +187,17 @@ export default function CheckoutPage() {
             items: orderItems,
             customer: { name: form.name, phone: form.phone, email: form.email },
             shippingAddress: form,
-            couponCode: coupon
+            couponCode: coupon,
+            expectedTotal: total
           })
         });
         const orderData = await orderRes.json();
-        if (!orderRes.ok) { toast.error(orderData.error || 'Payment gateway error'); setSubmitting(false); return; }
+        if (!orderRes.ok) {
+          toast.error(orderData.error || 'Payment gateway error');
+          if (orderRes.status === 409) fetchShipping(); // refresh what the page shows
+          setSubmitting(false);
+          return;
+        }
 
         const rzp = new window.Razorpay({
           key: orderData.keyId,
@@ -260,6 +269,14 @@ export default function CheckoutPage() {
 
   const placeOrderDisabled = submitting || shippingLoading || checkingStock || shipping === null;
 
+  // Only show the "add ₹X more for free shipping" banner when a free-shipping
+  // threshold is actually configured (> 0) and the customer hasn't reached it.
+  const amountToFreeShipping =
+    freeShippingAbove !== null && freeShippingAbove > 0
+      ? freeShippingAbove - discountedSubtotal
+      : 0;
+  const showFreeShippingBanner = shipping !== null && shipping > 0 && amountToFreeShipping > 0;
+
   return (
     <div className="max-w-4xl mx-auto px-5 sm:px-8 py-8 sm:py-14" style={{ background: PAPER }}>
       <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="afterInteractive" />
@@ -268,12 +285,12 @@ export default function CheckoutPage() {
         Checkout
       </h1>
 
-      {freeShippingAbove !== null && shipping !== null && shipping > 0 && (
+      {showFreeShippingBanner && (
         <div
           className="text-xs py-2.5 px-4 mb-6"
           style={{ background: PEACH_LIGHT, color: INK_SOFT, borderRadius: '3px' }}
         >
-          Add <strong style={{ color: PEACH }}>{formatINR(freeShippingAbove - discountedSubtotal)}</strong> more to get{' '}
+          Add <strong style={{ color: PEACH }}>{formatINR(amountToFreeShipping)}</strong> more to get{' '}
           <strong style={{ color: SAGE }}>free shipping</strong>
         </div>
       )}
