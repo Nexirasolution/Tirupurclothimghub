@@ -6,6 +6,7 @@ import Script from 'next/script';
 import toast from 'react-hot-toast';
 import { useCart, cartKey } from '@/components/CartContext';
 import { formatINR } from '@/lib/utils';
+import { INDIAN_STATES } from '@/lib/indianStates';
 
 const INK = '#241B21';
 const INK_SOFT = '#9C877D';
@@ -14,6 +15,7 @@ const PEACH_LIGHT = '#F7EDE4';
 const LINE = '#EEE3DA';
 const PAPER = '#FFFFFF';
 const SAGE = '#7C9473';
+const RUST = '#B0503A';
 const FONT_SERIF = "Georgia, 'Times New Roman', serif";
 
 const inputClass =
@@ -39,7 +41,7 @@ function SSRKInput({ placeholder, type = 'text', value, onChange, autoComplete, 
 }
 
 export default function CheckoutPage() {
-  const { items, subtotal, clearCart, updateQty, removeItem, setItemStock } = useCart();
+  const { items, subtotal, totalPieces, clearCart, updateQty, removeItem, setItemStock } = useCart();
   const router = useRouter();
   const [form, setForm] = useState({
     name: '', phone: '', email: '',
@@ -54,13 +56,15 @@ export default function CheckoutPage() {
   const [shipping, setShipping] = useState(null);
   const [freeShippingAbove, setFreeShippingAbove] = useState(null);
   const [shippingLoading, setShippingLoading] = useState(false);
+  const [deliverable, setDeliverable] = useState(true);
 
   const discountedSubtotal = subtotal - discount;
   const total = shipping !== null ? Math.round(discountedSubtotal + shipping) : null;
 
-  // Total piece count across the cart — used by the shipping API to work
-  // out order weight (totalQty × weight-per-piece from admin Settings).
-  const totalQty = items.reduce((sum, i) => sum + (i.qty || 0), 0);
+  // Physical pieces across the cart. Combo lines count as their piece count
+  // (1 × Pack of 10 = 10). The shipping API turns this into
+  // weight = pieces × weight-per-piece from admin Settings.
+  const totalQty = totalPieces;
 
   const fetchShipping = useCallback(async () => {
     setShippingLoading(true);
@@ -68,12 +72,13 @@ export default function CheckoutPage() {
       const res = await fetch('/api/admin/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subtotal: discountedSubtotal, totalQty })
+        body: JSON.stringify({ subtotal: discountedSubtotal, totalQty, state: form.state })
       });
       const data = await res.json();
       if (res.ok) {
         setShipping(data.shippingCost);
         setFreeShippingAbove(data.freeShippingAbove);
+        setDeliverable(data.deliverable !== false);
       } else {
         toast.error(data.error || 'Could not calculate shipping');
       }
@@ -82,7 +87,7 @@ export default function CheckoutPage() {
     } finally {
       setShippingLoading(false);
     }
-  }, [discountedSubtotal, totalQty]);
+  }, [discountedSubtotal, totalQty, form.state]);
 
   useEffect(() => { fetchShipping(); }, [fetchShipping]);
 
@@ -113,6 +118,14 @@ export default function CheckoutPage() {
             size: i.size,
             qty: i.qty,
             name: i.name,
+            isCombo: i.isCombo || false,
+            comboId: i.comboId,
+            packKey: i.packKey,
+            packDetails: i.packDetails,
+            sleeveType: i.sleeveType,
+            zipType: i.zipType,
+            pantOption: i.pantOption,
+            shawlOption: i.shawlOption,
           })),
         }),
       });
@@ -147,9 +160,10 @@ export default function CheckoutPage() {
   }
 
   async function placeOrder() {
-    if (!form.name || !form.phone || !form.line1 || !form.city || !form.pincode) {
+    if (!form.name || !form.phone || !form.line1 || !form.city || !form.state || !form.pincode) {
       toast.error('Please fill all required fields'); return;
     }
+    if (!deliverable) { toast.error(`Sorry, we don't deliver to ${form.state} yet`); return; }
     if (items.length === 0) { toast.error('Your cart is empty'); return; }
     if (shipping === null) { toast.error('Shipping is still being calculated, please wait'); return; }
 
@@ -167,19 +181,22 @@ export default function CheckoutPage() {
       size: i.size,
       sleeveType: i.sleeveType || '',
       zipType: i.zipType || '',
+      pantOption: i.pantOption,
+      shawlOption: i.shawlOption,
       qty: i.qty,
       isCombo: i.isCombo || false,
-      comboId: i.comboId
+      comboId: i.comboId,
+      // Color-pack: server uses packSize + colors to verify pieces, stock and price.
+      ...(i.packDetails ? { packDetails: i.packDetails } : {}),
     }));
 
     try {
       if (paymentMethod === 'razorpay') {
-        // Server recomputes the total from orderItems and stashes the order
-        // payload so the webhook can create the order even if this tab
-        // closes before the handler below runs.
-        // `expectedTotal` is only a safety check: if the server's total
-        // differs from what the customer saw, the server answers 409 and
-        // the Razorpay popup never opens with a wrong amount.
+        // Server recomputes the total (shipping from DB-derived piece counts
+        // and the delivery state) and stashes the order payload so the
+        // webhook can create the order even if this tab closes early.
+        // `expectedTotal` is only a safety check: on mismatch the server
+        // answers 409 and the Razorpay popup never opens.
         const orderRes = await fetch('/api/payment/create-order', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -194,7 +211,7 @@ export default function CheckoutPage() {
         const orderData = await orderRes.json();
         if (!orderRes.ok) {
           toast.error(orderData.error || 'Payment gateway error');
-          if (orderRes.status === 409) fetchShipping(); // refresh what the page shows
+          if (orderRes.status === 409) fetchShipping();
           setSubmitting(false);
           return;
         }
@@ -230,8 +247,6 @@ export default function CheckoutPage() {
               clearCart();
               router.push(`/order-success/${finalData.order._id}`);
             } else {
-              // Payment already succeeded on Razorpay's side regardless —
-              // the webhook will still create the order in the background.
               toast.error(
                 `Payment received — confirming your order. If it doesn't appear shortly, contact support with payment ID ${response.razorpay_payment_id}.`,
                 { duration: 8000 }
@@ -267,15 +282,18 @@ export default function CheckoutPage() {
     }
   }
 
-  const placeOrderDisabled = submitting || shippingLoading || checkingStock || shipping === null;
+  const placeOrderDisabled =
+    submitting || shippingLoading || checkingStock || shipping === null || !deliverable;
 
   // Only show the "add ₹X more for free shipping" banner when a free-shipping
-  // threshold is actually configured (> 0) and the customer hasn't reached it.
+  // threshold applies (> 0, already resolved for the chosen state) and the
+  // customer hasn't reached it.
   const amountToFreeShipping =
     freeShippingAbove !== null && freeShippingAbove > 0
       ? freeShippingAbove - discountedSubtotal
       : 0;
-  const showFreeShippingBanner = shipping !== null && shipping > 0 && amountToFreeShipping > 0;
+  const showFreeShippingBanner =
+    deliverable && shipping !== null && shipping > 0 && amountToFreeShipping > 0;
 
   return (
     <div className="max-w-4xl mx-auto px-5 sm:px-8 py-8 sm:py-14" style={{ background: PAPER }}>
@@ -292,6 +310,15 @@ export default function CheckoutPage() {
         >
           Add <strong style={{ color: PEACH }}>{formatINR(amountToFreeShipping)}</strong> more to get{' '}
           <strong style={{ color: SAGE }}>free shipping</strong>
+        </div>
+      )}
+
+      {!deliverable && form.state && (
+        <div
+          className="text-xs py-2.5 px-4 mb-6"
+          style={{ background: '#FBEAE6', color: RUST, borderRadius: '3px' }}
+        >
+          Sorry, we don&apos;t deliver to <strong>{form.state}</strong> yet. Please choose another state.
         </div>
       )}
 
@@ -314,14 +341,18 @@ export default function CheckoutPage() {
                 className={inputClass}
                 style={inputStyle}
               />
-              <input
-                placeholder="State"
+              <select
                 autoComplete="address-level1"
                 value={form.state}
                 onChange={(e) => update('state', e.target.value)}
                 className={inputClass}
-                style={inputStyle}
-              />
+                style={{ ...inputStyle, color: form.state ? INK : INK_SOFT }}
+              >
+                <option value="">State *</option>
+                {INDIAN_STATES.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <input
@@ -355,6 +386,7 @@ export default function CheckoutPage() {
                 <div key={idx} className="flex justify-between text-sm py-1 gap-2" style={{ color: INK_SOFT }}>
                   <span className="truncate">
                     {i.name} ({[i.color, i.size, i.sleeveType, i.zipType].filter(Boolean).join('/')}) ×{i.qty}
+                    {i.isCombo && i.pieces > 1 ? ` · ${i.qty * i.pieces} pcs` : ''}
                   </span>
                   <span className="shrink-0" style={{ color: INK }}>{formatINR(i.price * i.qty)}</span>
                 </div>
@@ -395,13 +427,15 @@ export default function CheckoutPage() {
               <div className="flex justify-between" style={{ color: INK_SOFT }}>
                 <span>Shipping</span>
                 <span>
-                  {shippingLoading
-                    ? <span style={{ color: INK_SOFT, opacity: 0.6 }}>Calculating…</span>
-                    : shipping === 0
-                      ? <span style={{ color: SAGE }}>Free</span>
-                      : shipping !== null
-                        ? formatINR(shipping)
-                        : <span style={{ color: INK_SOFT, opacity: 0.6 }}>—</span>
+                  {!deliverable
+                    ? <span style={{ color: RUST }}>Not available for {form.state}</span>
+                    : shippingLoading
+                      ? <span style={{ color: INK_SOFT, opacity: 0.6 }}>Calculating…</span>
+                      : shipping === 0
+                        ? <span style={{ color: SAGE }}>Free</span>
+                        : shipping !== null
+                          ? formatINR(shipping)
+                          : <span style={{ color: INK_SOFT, opacity: 0.6 }}>—</span>
                   }
                 </span>
               </div>
@@ -409,7 +443,9 @@ export default function CheckoutPage() {
 
             <div className="flex justify-between mt-3 pt-3 text-base" style={{ borderTop: `1px solid ${LINE}` }}>
               <span style={{ color: INK }}>Total</span>
-              <span style={{ color: PEACH, fontFamily: FONT_SERIF }}>{total !== null ? formatINR(total) : '—'}</span>
+              <span style={{ color: PEACH, fontFamily: FONT_SERIF }}>
+                {deliverable && total !== null ? formatINR(total) : '—'}
+              </span>
             </div>
           </div>
 
@@ -439,11 +475,13 @@ export default function CheckoutPage() {
           >
             {submitting
               ? (checkingStock ? 'Checking stock…' : 'Placing Order…')
-              : shippingLoading
-                ? 'Calculating shipping…'
-                : total !== null
-                  ? `Place Order — ${formatINR(total)}`
-                  : 'Place Order'
+              : !deliverable
+                ? 'Not deliverable to this state'
+                : shippingLoading
+                  ? 'Calculating shipping…'
+                  : total !== null
+                    ? `Place Order — ${formatINR(total)}`
+                    : 'Place Order'
             }
           </button>
         </div>

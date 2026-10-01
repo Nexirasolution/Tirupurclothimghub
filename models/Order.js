@@ -13,10 +13,27 @@ const AddonSelectionSchema = new mongoose.Schema(
   { _id: false }
 );
 
+// Snapshot of a color-pack's contents (pack size + how many of each color).
+const PackDetailsSchema = new mongoose.Schema(
+  {
+    packSize: { type: Number },
+    size: { type: String, default: '' },
+    colors: [
+      {
+        _id: false,
+        name: { type: String },
+        qty: { type: Number }
+      }
+    ]
+  },
+  { _id: false }
+);
+
 const OrderItemSchema = new mongoose.Schema(
   {
     product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
     comboId: { type: mongoose.Schema.Types.ObjectId, ref: 'Combo', default: null },
+    isCombo: { type: Boolean, default: false },
     name: String,
     sku: { type: String, default: '' },
     image: String,
@@ -27,6 +44,8 @@ const OrderItemSchema = new mongoose.Schema(
     // null when the customer picked "None" (no pant / no shawl)
     pantOption: { type: AddonSelectionSchema, default: null },
     shawlOption: { type: AddonSelectionSchema, default: null },
+    // Only set for color-pack combo lines
+    packDetails: { type: PackDetailsSchema, default: null },
     price: Number, // unit price INCLUDING pant/shawl add-on prices
     qty: Number
   },

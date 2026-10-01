@@ -3,6 +3,7 @@
 import { useCart } from './CartContext';
 import { useRouter } from 'next/navigation';
 import { ShoppingBag, Zap } from 'lucide-react';
+import { piecesPerUnit } from '@/lib/comboPieces';
 
 const PEACH = '#D9946A';
 const PEACH_DARK = '#C57F55';
@@ -16,12 +17,15 @@ export default function AddComboButton({ combo }) {
     productId: combo._id,
     variantId: 'combo',
     comboId: combo._id,
+    isCombo: true,
     name: combo.name,
     image: combo.images?.[0],
     color: '-',
     size: 'Combo',
     price: combo.comboPrice,
     qty: 1,
+    // Pieces in ONE combo (admin-set piecesPerCombo, else products count)
+    pieces: piecesPerUnit(combo),
   };
 
   function handleAddToCart() {

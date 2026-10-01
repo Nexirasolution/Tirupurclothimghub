@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { formatINR } from '@/lib/utils';
 import ComboImageGallery from './ComboImageGallery';
 import { ShoppingBag, Zap, Ruler, Minus, Plus, PackageCheck, AlertCircle, ChevronDown } from 'lucide-react';
+import { piecesPerUnit } from '@/lib/comboPieces';
 
 const INK = '#241B21';
 const INK_SOFT = '#9C877D';
@@ -125,17 +126,32 @@ export default function ColorPackSelector({ combo }) {
     const colorsBreakdown = Object.entries(colorQty)
       .filter(([, v]) => v > 0)
       .map(([name, qty]) => ({ name, qty }));
+
+    // Unique per pack size + color mix, so different packs never merge in the cart.
+    const packKey = [
+      `p${packSize}`,
+      ...colorsBreakdown
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((c) => `${c.name.replace(/\s+/g, '_')}${c.qty}`),
+    ].join('_');
+
     return {
       productId: baseProduct?._id,
       comboId: combo._id,
       variantId: 'color-pack',
+      isCombo: true,
       name: `${combo.name} (Pack of ${packSize})`,
       image: images[0] || combo.images?.[0],
       color: colorsBreakdown.map((c) => `${c.name} x${c.qty}`).join(', '),
       size: selectedSize,
       price: pack?.price || 0,
-      qty: 1,
+      qty: 1, // number of packs
+      pieces: piecesPerUnit(combo, packSize), // pieces in ONE pack (drives shipping weight)
+      packKey,
       packDetails: { packSize, size: selectedSize, colors: colorsBreakdown },
+      // Cap the number of packs by the pack option's own stock when set
+      ...(pack?.stock != null ? { stock: pack.stock } : {}),
     };
   }
 
@@ -260,9 +276,6 @@ export default function ColorPackSelector({ combo }) {
             />
           </button>
 
-          {/* Inline size chart — expands directly below the trigger instead
-              of a popup modal, so it reads in context with the size the
-              shopper is picking. */}
           {showSizeChart && (
             <div className="mt-4 p-4" style={{ border: `1px solid ${LINE}`, borderRadius: '2px', background: PEACH_LIGHT }}>
               <p className="text-xs mb-3" style={{ color: INK_SOFT }}>All measurements in inches.</p>

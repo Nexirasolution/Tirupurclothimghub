@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
+import { totalPiecesOf } from '@/lib/comboPieces';
 
 const CartContext = createContext(null);
 const STORAGE_KEY = 'lb_cart_v1';
@@ -43,14 +44,15 @@ function brandToast(message, opts = {}) {
 }
 
 // A cart/order line is unique per product+variant+size AND per sleeve/zip/
-// pant/shawl selection now — e.g. the same size in "Full Sleeve" and "Half
-// Sleeve", or with vs without a pant add-on, are separate lines, not merged.
+// pant/shawl selection, and for color-pack combos per pack size + color
+// breakdown (packKey) so different packs never merge into one line.
 function sameLine(a, b) {
   return (
     a.productId === b.productId &&
     a.variantId === b.variantId &&
     a.size === b.size &&
     a.comboId === b.comboId &&
+    (a.packKey || '') === (b.packKey || '') &&
     (a.sleeveType || '') === (b.sleeveType || '') &&
     (a.zipType || '') === (b.zipType || '') &&
     (a.pantOption?.id || '') === (b.pantOption?.id || '') &&
@@ -97,7 +99,12 @@ export function CartProvider({ children }) {
         if (finalQty < desiredQty) clamped = true;
 
         const copy = [...prev];
-        copy[idx] = { ...copy[idx], qty: finalQty, stock: stockLimit };
+        copy[idx] = {
+          ...copy[idx],
+          qty: finalQty,
+          stock: stockLimit,
+          pieces: item.pieces ?? copy[idx].pieces,
+        };
         return copy;
       }
 
@@ -133,8 +140,7 @@ export function CartProvider({ children }) {
     });
   }, []);
 
-  // Adds several lines at once (e.g. all colors of a color-pack combo) as a
-  // single state update, with one summary toast instead of one per line.
+  // Adds several lines at once as a single state update, with one summary toast.
   const addItems = useCallback((newItems) => {
     let blockedCount = 0;
     let clampedCount = 0;
@@ -156,7 +162,12 @@ export function CartProvider({ children }) {
           const desiredQty = currentQty + item.qty;
           const finalQty = Math.min(desiredQty, stockLimit);
           if (finalQty < desiredQty) clampedCount++;
-          next[idx] = { ...next[idx], qty: finalQty, stock: stockLimit };
+          next[idx] = {
+            ...next[idx],
+            qty: finalQty,
+            stock: stockLimit,
+            pieces: item.pieces ?? next[idx].pieces,
+          };
           addedCount++;
           continue;
         }
@@ -240,8 +251,10 @@ export function CartProvider({ children }) {
     });
   }, []);
 
-  const subtotal = items.reduce((s, i) => s + i.price * i.qty, 0);
-  const count    = items.reduce((s, i) => s + i.qty, 0);
+  const subtotal    = items.reduce((s, i) => s + i.price * i.qty, 0);
+  const count       = items.reduce((s, i) => s + i.qty, 0);
+  // Physical pieces (combo lines expand to their piece count), used for shipping weight.
+  const totalPieces = totalPiecesOf(items);
 
   return (
     <CartContext.Provider
@@ -255,6 +268,7 @@ export function CartProvider({ children }) {
         clearCart,
         subtotal,
         count,
+        totalPieces,
       }}
     >
       {children}
@@ -268,6 +282,7 @@ export function cartKey(i) {
     i.variantId,
     i.size,
     i.comboId,
+    i.packKey,
     i.sleeveType,
     i.zipType,
     i.pantOption?.id,

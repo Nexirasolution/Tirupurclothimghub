@@ -1,5 +1,17 @@
 import mongoose from 'mongoose';
 
+// Per-state shipping override. A field left null means "use the global value".
+const StateShippingSchema = new mongoose.Schema(
+  {
+    state: { type: String, required: true },
+    enabled: { type: Boolean, default: true }, // false = we don't deliver here
+    pricePerKg: { type: Number, default: null },
+    defaultShippingCharge: { type: Number, default: null },
+    freeShippingAbove: { type: Number, default: null }
+  },
+  { _id: false }
+);
+
 const SettingsSchema = new mongoose.Schema(
   {
     key: { type: String, required: true, unique: true },
@@ -9,23 +21,20 @@ const SettingsSchema = new mongoose.Schema(
     instagram: { type: String },
     address: { type: String },
 
-    // Weight-based shipping: admin sets the assumed weight of a single
-    // piece (garment/unit) and a price per kg. Total order weight is
-    // computed as (total piece count across the cart) * weightPerPiece,
-    // then charged at pricePerKg, rounded up to the next whole kg.
-    // See lib/shipping.js — the only place this is calculated.
+    // Weight-based shipping. See lib/shipping.js, the only place this is calculated.
     // `shippingFee` is legacy and no longer read by the shipping calculator.
     shippingFee: { type: Number, default: 0 },
     weightPerPiece: { type: Number, default: 0 }, // grams, per single piece
-    pricePerKg: { type: Number, default: 0 }, // ₹ charged per kg (rounded up)
+    pricePerKg: { type: Number, default: 0 }, // ₹ per kg (rounded up)
 
-    // Flat fallback used whenever weight-based shipping can't be computed,
-    // i.e. weightPerPiece or pricePerKg is 0.
+    // Flat fallback when weight-based shipping can't be computed.
     defaultShippingCharge: { type: Number, default: 0 },
 
-    // Order subtotal (₹) at or above which shipping is free.
-    // 0 means "free shipping disabled".
+    // Subtotal (₹) at or above which shipping is free. 0 = disabled.
     freeShippingAbove: { type: Number, default: 0 },
+
+    // State-wise overrides plus a per-state "deliverable" switch.
+    stateShipping: { type: [StateShippingSchema], default: [] },
 
     seoTitle: { type: String },
     seoDescription: { type: String }

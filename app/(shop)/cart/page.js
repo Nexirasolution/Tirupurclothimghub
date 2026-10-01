@@ -60,6 +60,11 @@ export default function CartPage() {
                 <p className="text-xs mt-1" style={{ color: INK_SOFT }}>
                   Color: {item.color} &nbsp;·&nbsp; Size: {item.size}
                 </p>
+                {item.isCombo && item.pieces > 1 && (
+                  <p className="text-xs mt-0.5" style={{ color: INK_SOFT }}>
+                    {item.pieces} pieces{item.qty > 1 ? ` each · ${item.qty * item.pieces} total` : ''}
+                  </p>
+                )}
                 <p className="text-sm mt-1.5" style={{ color: PEACH }}>{formatINR(item.price)}</p>
 
                 {/* Qty controls + remove */}

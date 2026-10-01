@@ -3,6 +3,7 @@ import { dbConnect } from '@/lib/mongodb';
 import { getRazorpay } from '@/lib/razorpay';
 import PendingOrder from '@/models/PendingOrder';
 import { buildOrderItemsAndTotals, OrderError } from '@/lib/orderCalc';
+import { INDIAN_STATES } from '@/lib/indianStates';
 
 // POST { items, customer, shippingAddress, couponCode, expectedTotal }
 // Recomputes pricing server-side (never trusts a client-sent amount),
@@ -10,9 +11,8 @@ import { buildOrderItemsAndTotals, OrderError } from '@/lib/orderCalc';
 // even if the customer's browser never calls back, then creates the
 // Razorpay order for the verified total.
 //
-// `expectedTotal` is the total the customer saw on the checkout page.
-// It is NOT used as the charge amount — only compared against the server
-// total so a mismatch is caught before the Razorpay popup opens.
+// `expectedTotal` is only compared against the server total so a mismatch
+// is caught before the Razorpay popup opens.
 export async function POST(req) {
   try {
     await dbConnect();
@@ -22,8 +22,15 @@ export async function POST(req) {
     if (!customer?.name || !customer?.phone) {
       return NextResponse.json({ error: 'Name and phone are required' }, { status: 400 });
     }
+    if (!shippingAddress?.state || !INDIAN_STATES.includes(shippingAddress.state)) {
+      return NextResponse.json({ error: 'Please select a valid delivery state' }, { status: 400 });
+    }
 
-    const { subtotal, discount, shippingFee, total } = await buildOrderItemsAndTotals(items, couponCode);
+    const { subtotal, discount, shippingFee, total } = await buildOrderItemsAndTotals(
+      items,
+      couponCode,
+      shippingAddress.state
+    );
 
     if (process.env.NODE_ENV !== 'production') {
       console.log('CREATE-ORDER DEBUG', {
@@ -31,6 +38,7 @@ export async function POST(req) {
         discount,
         shippingFee,
         total,
+        state: shippingAddress.state,
         amountInPaise: Math.round(total * 100),
         expectedTotal
       });

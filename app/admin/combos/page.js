@@ -8,7 +8,7 @@ import ColorPackFields from '@/components/admin/ColorPackFields';
 const emptyForm = {
   type: 'multi-product',
   name: '', images: [], description: '',
-  comboPrice: '', originalPrice: '', productIds: [],
+  comboPrice: '', originalPrice: '', piecesPerCombo: '', productIds: [],
   baseProduct: '', colors: [], packOptions: [], sizeChart: [],
 };
 
@@ -55,6 +55,7 @@ export default function AdminCombosPage() {
       description: combo.description || '',
       comboPrice: combo.comboPrice ?? '',
       originalPrice: combo.originalPrice ?? '',
+      piecesPerCombo: combo.piecesPerCombo || '',
       productIds: (combo.products || []).map((p) => (typeof p.product === 'object' ? p.product?._id : p.product) || p._id || p),
       baseProduct: (typeof combo.baseProduct === 'object' ? combo.baseProduct?._id : combo.baseProduct) || '',
       colors: combo.colors || [],
@@ -115,6 +116,9 @@ export default function AdminCombosPage() {
           description: form.description,
           comboPrice: Number(form.comboPrice),
           originalPrice: Number(form.originalPrice) || 0,
+          // Pieces in ONE combo — drives shipping weight. Defaults to the
+          // number of selected products when left blank.
+          piecesPerCombo: Number(form.piecesPerCombo) || form.productIds.length,
           products: form.productIds.map((id) => ({ product: id })),
           sizeChart: form.sizeChart,
         };
@@ -208,10 +212,21 @@ export default function AdminCombosPage() {
 
           {form.type === 'multi-product' ? (
             <>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <input required type="number" placeholder="Combo price ₹" className="border rounded-lg px-3 py-2 text-sm" value={form.comboPrice} onChange={(e) => setForm({ ...form, comboPrice: e.target.value })} />
                 <input type="number" placeholder="Original price ₹" className="border rounded-lg px-3 py-2 text-sm" value={form.originalPrice} onChange={(e) => setForm({ ...form, originalPrice: e.target.value })} />
+                <input
+                  type="number"
+                  min="1"
+                  placeholder={`Pieces in combo (${form.productIds.length || 'auto'})`}
+                  className="border rounded-lg px-3 py-2 text-sm"
+                  value={form.piecesPerCombo}
+                  onChange={(e) => setForm({ ...form, piecesPerCombo: e.target.value })}
+                />
               </div>
+              <p className="text-[10px] text-neutral-400 -mt-1">
+                Pieces in combo = total items the customer receives in ONE combo. Shipping weight is calculated from this. Leave blank to use the number of selected products.
+              </p>
               <p className="text-sm font-medium">Select products in this combo:</p>
               <div className="max-h-40 overflow-y-auto border rounded-lg p-2 space-y-1">
                 {products.map((p) => (
@@ -222,7 +237,12 @@ export default function AdminCombosPage() {
               </div>
             </>
           ) : (
-            <ColorPackFields form={form} setForm={setForm} products={products} />
+            <>
+              <ColorPackFields form={form} setForm={setForm} products={products} />
+              <p className="text-[10px] text-neutral-400">
+                For color packs, shipping weight uses the pack size (e.g. Pack of 10 = 10 pieces) automatically.
+              </p>
+            </>
           )}
 
           <button className="btn-primary text-sm" disabled={uploading}>
@@ -237,6 +257,9 @@ export default function AdminCombosPage() {
             ? (c.packOptions?.length ? `From ₹${Math.min(...c.packOptions.map((p) => p.price))}` : '—')
             : `₹${c.comboPrice}`;
           const cover = c.images?.[0] || c.image;
+          const pieceLabel = c.type === 'color-pack'
+            ? null
+            : `${c.piecesPerCombo || c.products?.length || 1} pcs`;
           return (
             <div key={c._id} className="card-soft overflow-hidden">
               <div className="h-32 bg-brand-cream">{cover && <img src={cover} alt={c.name} className="w-full h-full object-cover" />}</div>
@@ -245,6 +268,9 @@ export default function AdminCombosPage() {
                   <p className="font-medium text-sm">{c.name}</p>
                   {c.type === 'color-pack' && (
                     <span className="text-[10px] bg-pink-50 text-pink-600 px-1.5 py-0.5 rounded-full">Color Pack</span>
+                  )}
+                  {pieceLabel && (
+                    <span className="text-[10px] bg-neutral-100 text-neutral-600 px-1.5 py-0.5 rounded-full">{pieceLabel}</span>
                   )}
                 </div>
                 <p className="text-brand-magenta font-semibold text-sm">{priceLabel}</p>
