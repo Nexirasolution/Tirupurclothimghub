@@ -105,6 +105,11 @@ export default function ProductClient({ data }) {
     if (Math.abs(dx) > 40) (dx < 0 ? nextImage() : prevImage());
   };
 
+  function handleWish() {
+    setWished((w) => !w);
+    toast.success(wished ? 'Removed from wishlist' : 'Added to wishlist');
+  }
+
   function handleShare() {
     if (navigator.share) {
       navigator.share({ title: product.name, url: window.location.href }).catch(() => {});
@@ -208,6 +213,27 @@ export default function ProductClient({ data }) {
                 />
               )}
 
+              {/* Like / share, overlaid top-right on the image (all screen sizes) */}
+              <div className="absolute top-3 right-3 z-10 flex flex-col gap-2">
+                <button
+                  onClick={handleWish}
+                  aria-label={wished ? 'Remove from wishlist' : 'Save to wishlist'}
+                  aria-pressed={wished}
+                  className="w-9 h-9 flex items-center justify-center rounded-full active:scale-90 transition-transform"
+                  style={{ background: 'rgba(255,255,255,0.92)' }}
+                >
+                  <Heart size={17} strokeWidth={1.6} style={{ color: wished ? PEACH : INK }} fill={wished ? PEACH : 'none'} />
+                </button>
+                <button
+                  onClick={handleShare}
+                  aria-label="Share"
+                  className="w-9 h-9 flex items-center justify-center rounded-full active:scale-90 transition-transform"
+                  style={{ background: 'rgba(255,255,255,0.92)' }}
+                >
+                  <Share2 size={16} strokeWidth={1.6} style={{ color: INK }} />
+                </button>
+              </div>
+
               {images.length > 1 && (
                 <>
                   <button
@@ -266,20 +292,6 @@ export default function ProductClient({ data }) {
               </div>
             )}
 
-            <div className="hidden sm:flex items-center gap-5 mt-4">
-              <button
-                onClick={() => { setWished((w) => !w); toast.success(wished ? 'Removed from wishlist' : 'Added to wishlist'); }}
-                className="flex items-center gap-1.5 text-xs font-medium"
-                style={{ color: wished ? PEACH : INK_SOFT }}
-              >
-                <Heart size={14} strokeWidth={1.5} fill={wished ? PEACH : 'none'} />
-                {wished ? 'Saved' : 'Save'}
-              </button>
-              <button onClick={handleShare} className="flex items-center gap-1.5 text-xs font-medium" style={{ color: INK_SOFT }}>
-                <Share2 size={14} strokeWidth={1.5} />
-                Share
-              </button>
-            </div>
           </div>
 
           {/* ── Details ── */}
