@@ -7,11 +7,20 @@ import ProductForm from '@/components/admin/ProductForm';
 export default function EditProductPage() {
   const { id } = useParams();
   const [initial, setInitial] = useState(null);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    fetch(`/api/products/${id}`).then((r) => r.json()).then((d) => setInitial(d.product));
+    // admin=1 -> fresh, uncached read straight from the DB (includes inactive products)
+    fetch(`/api/products/${id}?admin=1`, { cache: 'no-store' })
+      .then(async (r) => {
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error || 'Could not load product');
+        setInitial(d.product);
+      })
+      .catch((e) => setError(e.message));
   }, [id]);
 
+  if (error) return <p className="text-brand-ink/50">{error}</p>;
   if (!initial) return <p className="text-brand-ink/50">Loading product...</p>;
 
   return (

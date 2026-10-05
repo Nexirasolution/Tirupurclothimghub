@@ -49,6 +49,17 @@ const ComboSchema = new mongoose.Schema(
     comboPrice: { type: Number, default: 0 },
     originalPrice: { type: Number, default: 0 },
 
+    // Total items the customer receives in ONE multi-product combo.
+    // Used for the shipping-weight fallback (pieces x weight per piece).
+    piecesPerCombo: { type: Number, default: 0, min: 0 },
+
+    // Manual shipping weight in GRAMS (0 = not set).
+    // multi-product: total weight of ONE combo.
+    weight: { type: Number, default: 0, min: 0 },
+    // color-pack: weight of ONE piece (pack weight = pieces x pieceWeight).
+    // If 0, the base product's own weight is used.
+    pieceWeight: { type: Number, default: 0, min: 0 },
+
     baseProduct: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
     colors: [ColorOptionSchema],
     packOptions: [PackOptionSchema],
@@ -59,11 +70,8 @@ const ComboSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// In dev, Next.js hot-reload keeps the Node process (and Mongoose's model
-// registry) alive across file saves. `mongoose.models.Combo || mongoose.model(...)`
-// would silently keep reusing a stale schema after edits like this one.
-// Force a fresh compile every time this module runs so schema changes always
-// take effect without needing a full server restart.
+// In dev, Next.js hot-reload keeps Mongoose's model registry alive across
+// saves; force a fresh compile so schema changes always take effect.
 if (mongoose.models.Combo) {
   delete mongoose.models.Combo;
 }

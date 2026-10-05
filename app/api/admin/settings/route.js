@@ -5,6 +5,7 @@ import { dbConnect } from '@/lib/mongodb';
 import Settings from '@/models/Settings';
 import { requireAdmin } from '@/lib/apiAuth';
 import { calculateShipping } from '@/lib/shipping';
+import { computeCartWeight } from '@/lib/cartWeight';
 
 const numOrNull = (v) =>
   v === '' || v === null || v === undefined || Number.isNaN(Number(v)) ? null : Number(v);
@@ -44,13 +45,14 @@ export const PUT = requireAdmin(async (req) => {
 });
 
 // POST /api/admin/settings — used by checkout to calculate shipping.
-// Body: { subtotal, totalQty, state }
+// Body: { subtotal, totalQty, state, items }
 //   subtotal — cart subtotal in ₹ (after discount), for the free-shipping threshold.
-//   totalQty — total physical pieces in the cart, for weight.
+//   totalQty — total physical pieces in the cart (fallback weight).
 //   state    — customer's delivery state, for state-wise rates / blocking.
+//   items    — cart lines; weight is computed server-side from product/combo weights.
 export async function POST(req) {
   try {
-    const { subtotal, totalQty, state } = await req.json();
+    const { subtotal, totalQty, state, items } = await req.json();
 
     await dbConnect();
     const settings = await Settings.findOne({ key: 'global' }).lean();
@@ -58,7 +60,15 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Settings not configured' }, { status: 500 });
     }
 
-    return NextResponse.json(calculateShipping(settings, { subtotal, totalQty, state }));
+    let totalWeightGrams = 0;
+    if (Array.isArray(items) && items.length) {
+      const result = await computeCartWeight(items, Number(settings.weightPerPiece) || 0);
+      totalWeightGrams = result.totalGrams;
+    }
+
+    return NextResponse.json(
+      calculateShipping(settings, { subtotal, totalQty, totalWeightGrams, state })
+    );
   } catch (err) {
     console.error('Shipping calculate error:', err);
     return NextResponse.json({ error: 'Could not calculate shipping' }, { status: 500 });

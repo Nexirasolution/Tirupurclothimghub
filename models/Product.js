@@ -57,6 +57,9 @@ const ProductSchema = new mongoose.Schema(
     pantOptions: [AddonOptionSchema],
     shawlOptions: [AddonOptionSchema],
 
+    // Manual shipping weight of ONE piece, in grams. 0 = not set.
+    weight: { type: Number, default: 0, min: 0 },
+
     // When true, the storefront shows a highlighted "Ready to Ship" badge
     // below the product title.
     isReadyToShip: { type: Boolean, default: false },
@@ -81,5 +84,12 @@ ProductSchema.index({ name: 'text', description: 'text', tags: 'text' });
 ProductSchema.index({ isActive: 1, category: 1, createdAt: -1 });
 ProductSchema.index({ isActive: 1, basePrice: 1 });
 ProductSchema.index({ 'variants.sizes.size': 1 });
+
+// In dev, Next.js hot-reload keeps Mongoose's model registry alive across
+// saves, so schema changes (like adding `weight`) are silently ignored until
+// the server restarts. Force a fresh compile outside production.
+if (process.env.NODE_ENV !== 'production' && mongoose.models.Product) {
+  delete mongoose.models.Product;
+}
 
 export default mongoose.models.Product || mongoose.model('Product', ProductSchema);

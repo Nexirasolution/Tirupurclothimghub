@@ -4,13 +4,11 @@ import Combo from '@/models/Combo';
 import { requireAdmin } from '@/lib/apiAuth';
 
 export const PUT = requireAdmin(async (req, { params }) => {
+  const { id } = await params; // works on Next 14 and 15
   await dbConnect();
   const body = await req.json();
 
-  // Same validation as POST — findByIdAndUpdate does NOT run schema
-  // validators or these checks by default, so without this an edit could
-  // silently save a combo with no colors/packOptions/price and the
-  // storefront would render blank.
+  // Same validation as POST — findByIdAndUpdate does NOT run these checks.
   if (!body.name) {
     return NextResponse.json({ error: 'Combo name is required' }, { status: 400 });
   }
@@ -29,10 +27,12 @@ export const PUT = requireAdmin(async (req, { params }) => {
     return NextResponse.json({ error: 'Combo price is required' }, { status: 400 });
   }
 
+  // Manual weights (grams), never negative
+  body.weight = Math.max(0, Number(body.weight) || 0);
+  body.pieceWeight = Math.max(0, Number(body.pieceWeight) || 0);
+
   try {
-    // runValidators: true — without it, Mongoose skips schema validation
-    // on updates (required fields, casting) and can persist bad data.
-    const combo = await Combo.findByIdAndUpdate(params.id, body, {
+    const combo = await Combo.findByIdAndUpdate(id, body, {
       new: true,
       runValidators: true,
     });
@@ -48,8 +48,9 @@ export const PUT = requireAdmin(async (req, { params }) => {
 });
 
 export const DELETE = requireAdmin(async (req, { params }) => {
+  const { id } = await params;
   await dbConnect();
-  const deleted = await Combo.findByIdAndDelete(params.id);
+  const deleted = await Combo.findByIdAndDelete(id);
 
   if (!deleted) {
     return NextResponse.json({ error: 'Combo not found' }, { status: 404 });

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Script from 'next/script';
 import toast from 'react-hot-toast';
@@ -61,10 +61,22 @@ export default function CheckoutPage() {
   const discountedSubtotal = subtotal - discount;
   const total = shipping !== null ? Math.round(discountedSubtotal + shipping) : null;
 
-  // Physical pieces across the cart. Combo lines count as their piece count
-  // (1 × Pack of 10 = 10). The shipping API turns this into
-  // weight = pieces × weight-per-piece from admin Settings.
+  // Physical pieces across the cart (fallback weight only).
   const totalQty = totalPieces;
+
+  // Lines sent to the shipping API. The server looks up each product's / combo's
+  // weight from the database, so only identifiers + quantities are sent.
+  const shippingItems = useMemo(
+    () =>
+      items.map((i) => ({
+        productId: i.productId,
+        comboId: i.comboId,
+        isCombo: i.isCombo || false,
+        qty: i.qty,
+        packDetails: i.packDetails,
+      })),
+    [items]
+  );
 
   const fetchShipping = useCallback(async () => {
     setShippingLoading(true);
@@ -72,7 +84,12 @@ export default function CheckoutPage() {
       const res = await fetch('/api/admin/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subtotal: discountedSubtotal, totalQty, state: form.state })
+        body: JSON.stringify({
+          subtotal: discountedSubtotal,
+          totalQty,
+          state: form.state,
+          items: shippingItems
+        })
       });
       const data = await res.json();
       if (res.ok) {
@@ -87,7 +104,7 @@ export default function CheckoutPage() {
     } finally {
       setShippingLoading(false);
     }
-  }, [discountedSubtotal, totalQty, form.state]);
+  }, [discountedSubtotal, totalQty, form.state, shippingItems]);
 
   useEffect(() => { fetchShipping(); }, [fetchShipping]);
 
@@ -192,7 +209,7 @@ export default function CheckoutPage() {
 
     try {
       if (paymentMethod === 'razorpay') {
-        // Server recomputes the total (shipping from DB-derived piece counts
+        // Server recomputes the total (shipping from DB-derived weights
         // and the delivery state) and stashes the order payload so the
         // webhook can create the order even if this tab closes early.
         // `expectedTotal` is only a safety check: on mismatch the server
@@ -385,7 +402,7 @@ export default function CheckoutPage() {
               {items.map((i, idx) => (
                 <div key={idx} className="flex justify-between text-sm py-1 gap-2" style={{ color: INK_SOFT }}>
                   <span className="truncate">
-                    {i.name} ({[i.color, i.size, i.sleeveType, i.zipType].filter(Boolean).join('/')}) ×{i.qty}
+                    {i.name} ({[i.color, i.packDetails ? '' : i.size, i.sleeveType, i.zipType].filter(Boolean).join('/')}) ×{i.qty}
                     {i.isCombo && i.pieces > 1 ? ` · ${i.qty * i.pieces} pcs` : ''}
                   </span>
                   <span className="shrink-0" style={{ color: INK }}>{formatINR(i.price * i.qty)}</span>

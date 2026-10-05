@@ -25,6 +25,9 @@ const GENERIC_SIZE_CHART = [
   { size: 'XXL', chest: '50-52', waist: '44-46', length: '31' },
 ];
 
+const SEP = '||';
+const keyOf = (name, size) => `${name}${SEP}${size}`;
+
 export default function ColorPackSelector({ combo }) {
   const { addItem } = useCart();
   const router = useRouter();
@@ -43,10 +46,9 @@ export default function ColorPackSelector({ combo }) {
     [combo.colors, variants]
   );
 
-  // Sizes normally come from the matched product variants. If none of the
-  // saved colors resolved a variant, fall back to the combo's own size
-  // chart so the selector isn't left permanently empty.
-  const allSizes = useMemo(() => {
+  // Fallback size list for colors whose variant could not be matched:
+  // the combo's own size chart (server still validates real stock).
+  const fallbackSizes = useMemo(() => {
     const set = new Set();
     colorOptions.forEach((c) => c.variant?.sizes?.forEach((s) => set.add(s.size)));
     if (set.size === 0 && combo.sizeChart?.length) {
@@ -55,15 +57,11 @@ export default function ColorPackSelector({ combo }) {
     return Array.from(set);
   }, [colorOptions, combo.sizeChart]);
 
-  const [selectedSize, setSelectedSize] = useState('');
+  // selection: { 'Red||M': 2, 'Red||L': 1, 'Blue||L': 2 }
+  const [selection, setSelection] = useState({});
   const [selectedPackIdx, setSelectedPackIdx] = useState(0);
-  const [colorQty, setColorQty] = useState({});
   const [activeColor, setActiveColor] = useState('');
   const [showSizeChart, setShowSizeChart] = useState(false);
-
-  useEffect(() => {
-    if (!selectedSize && allSizes.length) setSelectedSize(allSizes[0]);
-  }, [allSizes, selectedSize]);
 
   useEffect(() => {
     if (!activeColor && colorOptions.length) setActiveColor(colorOptions[0].name);
@@ -71,45 +69,64 @@ export default function ColorPackSelector({ combo }) {
 
   const pack = combo.packOptions?.[selectedPackIdx];
   const packSize = pack?.size || 0;
-  const totalSelected = Object.values(colorQty).reduce((a, b) => a + b, 0);
+
+  const entries = useMemo(
+    () =>
+      Object.entries(selection).map(([k, qty]) => {
+        const [name, size] = k.split(SEP);
+        return { name, size, qty };
+      }),
+    [selection]
+  );
+
+  const totalSelected = entries.reduce((s, e) => s + e.qty, 0);
   const remaining = packSize - totalSelected;
   const savings = pack ? Math.max((pack.originalPrice || 0) - pack.price, 0) : 0;
   const savingsPct = pack?.originalPrice > 0 ? Math.round((savings / pack.originalPrice) * 100) : 0;
 
-  // Admin-set combo stock takes priority when present; live variant/size
-  // stock is only a fallback when the admin hasn't set a number.
-  function stockFor(colorOpt) {
-    if (colorOpt?.stock != null) return colorOpt.stock;
-    if (!colorOpt?.variant || !selectedSize) return null;
-    const s = colorOpt.variant.sizes?.find((s) => s.size === selectedSize);
-    return s ? s.stock : 0;
+  function colorTotal(name) {
+    return entries.filter((e) => e.name === name).reduce((s, e) => s + e.qty, 0);
   }
 
-  function handleSizeChange(size) {
-    setSelectedSize(size);
-    setColorQty({});
+  // Sizes offered for a color, with live stock for each (null = unknown/unlimited)
+  function sizesFor(colorOpt) {
+    if (colorOpt.variant?.sizes?.length) {
+      return colorOpt.variant.sizes.map((s) => ({ size: s.size, stock: s.stock ?? 0 }));
+    }
+    return fallbackSizes.map((size) => ({ size, stock: null }));
   }
+
   function handlePackChange(idx) {
     setSelectedPackIdx(idx);
-    setColorQty({});
+    setSelection({});
   }
 
-  function updateQty(colorName, delta) {
-    setColorQty((prev) => {
-      const cur = prev[colorName] || 0;
+  function updateQty(colorName, size, delta) {
+    setSelection((prev) => {
+      const key = keyOf(colorName, size);
+      const cur = prev[key] || 0;
       const opt = colorOptions.find((c) => c.name === colorName);
-      const stock = stockFor(opt);
-      let next = cur + delta;
-      if (next < 0) next = 0;
-      if (stock != null && next > stock) next = stock;
+      let next = Math.max(0, cur + delta);
 
-      const othersTotal = Object.entries(prev).reduce(
-        (sum, [k, v]) => (k === colorName ? sum : sum + v),
-        0
-      );
-      if (othersTotal + next > packSize) next = Math.max(0, packSize - othersTotal);
+      // 1) live stock of this color in this size
+      const sizeStock = sizesFor(opt).find((s) => s.size === size)?.stock;
+      if (sizeStock != null) next = Math.min(next, sizeStock);
 
-      return { ...prev, [colorName]: next };
+      // 2) admin-set stock caps the color across ALL sizes
+      const prevEntries = Object.entries(prev).filter(([k]) => k !== key);
+      const colorOthers = prevEntries
+        .filter(([k]) => k.split(SEP)[0] === colorName)
+        .reduce((s, [, q]) => s + q, 0);
+      if (opt?.stock != null) next = Math.min(next, Math.max(0, opt.stock - colorOthers));
+
+      // 3) never exceed the pack size
+      const othersTotal = prevEntries.reduce((s, [, q]) => s + q, 0);
+      next = Math.min(next, Math.max(0, packSize - othersTotal));
+
+      const copy = { ...prev };
+      if (next <= 0) delete copy[key];
+      else copy[key] = next;
+      return copy;
     });
   }
 
@@ -120,20 +137,18 @@ export default function ColorPackSelector({ combo }) {
   // fallback for combos where the admin uploaded nothing.
   const images = combo.images?.length ? combo.images : activeVariant?.images?.length ? activeVariant.images : [];
 
-  const canAdd = packSize > 0 && remaining === 0 && !!selectedSize;
+  const canAdd = packSize > 0 && remaining === 0;
 
   function buildItem() {
-    const colorsBreakdown = Object.entries(colorQty)
-      .filter(([, v]) => v > 0)
-      .map(([name, qty]) => ({ name, qty }));
+    const picked = entries
+      .filter((e) => e.qty > 0)
+      .sort((a, b) => a.name.localeCompare(b.name) || a.size.localeCompare(b.size));
+    const distinctSizes = [...new Set(picked.map((e) => e.size))];
 
-    // Unique per pack size + color mix, so different packs never merge in the cart.
+    // Unique per pack size + color/size mix, so different packs never merge in the cart.
     const packKey = [
       `p${packSize}`,
-      ...colorsBreakdown
-        .slice()
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .map((c) => `${c.name.replace(/\s+/g, '_')}${c.qty}`),
+      ...picked.map((e) => `${e.name.replace(/\s+/g, '_')}-${e.size.replace(/\s+/g, '_')}${e.qty}`),
     ].join('_');
 
     return {
@@ -143,13 +158,17 @@ export default function ColorPackSelector({ combo }) {
       isCombo: true,
       name: `${combo.name} (Pack of ${packSize})`,
       image: images[0] || combo.images?.[0],
-      color: colorsBreakdown.map((c) => `${c.name} x${c.qty}`).join(', '),
-      size: selectedSize,
+      color: picked.map((e) => `${e.name} (${e.size}) x${e.qty}`).join(', '),
+      size: distinctSizes.join(', '),
       price: pack?.price || 0,
       qty: 1, // number of packs
-      pieces: piecesPerUnit(combo, packSize), // pieces in ONE pack (drives shipping weight)
+      pieces: piecesPerUnit(combo, packSize), // pieces in ONE pack (drives shipping weight fallback)
       packKey,
-      packDetails: { packSize, size: selectedSize, colors: colorsBreakdown },
+      packDetails: {
+        packSize,
+        size: distinctSizes.join(', '),
+        colors: picked.map((e) => ({ name: e.name, size: e.size, qty: e.qty })),
+      },
       // Cap the number of packs by the pack option's own stock when set
       ...(pack?.stock != null ? { stock: pack.stock } : {}),
     };
@@ -167,10 +186,8 @@ export default function ColorPackSelector({ combo }) {
 
   const helperText = packSize === 0
     ? 'This combo has no pack options set up yet'
-    : !selectedSize
-    ? 'Select a size to continue'
     : remaining > 0
-    ? `Pick ${remaining} more color${remaining === 1 ? '' : 's'} to continue`
+    ? `Pick ${remaining} more piece${remaining === 1 ? '' : 's'} to continue`
     : '';
 
   const sizeChartRows = combo.sizeChart?.length ? combo.sizeChart : GENERIC_SIZE_CHART;
@@ -231,78 +248,6 @@ export default function ColorPackSelector({ combo }) {
           )}
         </div>
 
-        {/* Size */}
-        <div className="mt-6">
-          <h3 className="text-sm mb-3" style={{ color: INK }}>Select size</h3>
-          {allSizes.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {allSizes.map((size) => {
-                const active = selectedSize === size;
-                return (
-                  <button
-                    key={size}
-                    onClick={() => handleSizeChange(size)}
-                    className="min-w-[44px] h-[44px] px-3 text-sm transition-colors"
-                    style={{
-                      borderRadius: '2px',
-                      border: `1px solid ${active ? INK : LINE}`,
-                      background: active ? INK : PAPER,
-                      color: active ? PAPER : INK,
-                    }}
-                  >
-                    {size}
-                  </button>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="text-xs" style={{ color: INK_SOFT }}>No sizes available for this combo yet.</p>
-          )}
-
-          {/* Size chart trigger — sits below the size buttons themselves */}
-          <button
-            onClick={() => setShowSizeChart((v) => !v)}
-            className="flex items-center gap-1 text-xs mt-3"
-            style={{ color: PEACH }}
-          >
-            <Ruler size={13} strokeWidth={1.75} /> Size chart
-            <ChevronDown
-              size={12}
-              strokeWidth={2}
-              style={{
-                transform: showSizeChart ? 'rotate(180deg)' : 'rotate(0deg)',
-                transition: 'transform 150ms ease',
-              }}
-            />
-          </button>
-
-          {showSizeChart && (
-            <div className="mt-4 p-4" style={{ border: `1px solid ${LINE}`, borderRadius: '2px', background: PEACH_LIGHT }}>
-              <p className="text-xs mb-3" style={{ color: INK_SOFT }}>All measurements in inches.</p>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-xs" style={{ color: INK_SOFT, borderBottom: `1px solid ${LINE}` }}>
-                    <th className="py-2 font-normal">Size</th>
-                    <th className="py-2 font-normal">Chest</th>
-                    <th className="py-2 font-normal">Waist</th>
-                    <th className="py-2 font-normal">Length</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sizeChartRows.map((row) => (
-                    <tr key={row.size} style={{ borderBottom: `1px solid ${LINE}` }}>
-                      <td className="py-2" style={{ color: INK }}>{row.size}</td>
-                      <td className="py-2" style={{ color: INK_SOFT }}>{row.chest}</td>
-                      <td className="py-2" style={{ color: INK_SOFT }}>{row.waist}</td>
-                      <td className="py-2" style={{ color: INK_SOFT }}>{row.length}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
         {/* Pack option */}
         <div className="mt-6">
           <h3 className="text-sm mb-3" style={{ color: INK }}>Choose pack</h3>
@@ -340,11 +285,11 @@ export default function ColorPackSelector({ combo }) {
           )}
         </div>
 
-        {/* Colors */}
+        {/* Colors + sizes */}
         <div className="mt-6">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-1">
             <h3 className="text-sm" style={{ color: INK }}>
-              Choose colors <span style={{ color: INK_SOFT }}>({totalSelected}/{packSize})</span>
+              Choose colors &amp; sizes <span style={{ color: INK_SOFT }}>({totalSelected}/{packSize})</span>
             </h3>
             {packSize > 0 && (
               remaining > 0 ? (
@@ -358,67 +303,160 @@ export default function ColorPackSelector({ combo }) {
               )
             )}
           </div>
+          <p className="text-xs mb-3" style={{ color: INK_SOFT }}>
+            Mix any colors and sizes — e.g. 2 in M and 3 in L.
+          </p>
+
+          {/* Size chart trigger */}
+          <button
+            onClick={() => setShowSizeChart((v) => !v)}
+            className="flex items-center gap-1 text-xs mb-3"
+            style={{ color: PEACH }}
+          >
+            <Ruler size={13} strokeWidth={1.75} /> Size chart
+            <ChevronDown
+              size={12}
+              strokeWidth={2}
+              style={{
+                transform: showSizeChart ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 150ms ease',
+              }}
+            />
+          </button>
+
+          {showSizeChart && (
+            <div className="mb-4 p-4" style={{ border: `1px solid ${LINE}`, borderRadius: '2px', background: PEACH_LIGHT }}>
+              <p className="text-xs mb-3" style={{ color: INK_SOFT }}>All measurements in inches.</p>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs" style={{ color: INK_SOFT, borderBottom: `1px solid ${LINE}` }}>
+                    <th className="py-2 font-normal">Size</th>
+                    <th className="py-2 font-normal">Chest</th>
+                    <th className="py-2 font-normal">Waist</th>
+                    <th className="py-2 font-normal">Length</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sizeChartRows.map((row) => (
+                    <tr key={row.size} style={{ borderBottom: `1px solid ${LINE}` }}>
+                      <td className="py-2" style={{ color: INK }}>{row.size}</td>
+                      <td className="py-2" style={{ color: INK_SOFT }}>{row.chest}</td>
+                      <td className="py-2" style={{ color: INK_SOFT }}>{row.waist}</td>
+                      <td className="py-2" style={{ color: INK_SOFT }}>{row.length}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
           {colorOptions.length > 0 ? (
-            <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-2.5">
               {colorOptions.map((c) => {
-                const stock = stockFor(c);
-                const outOfStock = stock === 0;
-                const qty = colorQty[c.name] || 0;
+                const sizes = sizesFor(c);
+                const total = colorTotal(c.name);
                 const isActive = activeColor === c.name;
+                const colorSoldOut = c.stock != null && c.stock <= 0;
                 return (
                   <div
                     key={c.name}
-                    onMouseEnter={() => setActiveColor(c.name)}
                     onClick={() => setActiveColor(c.name)}
-                    className="flex items-center gap-2 p-2.5 transition-colors"
+                    className="p-3 transition-colors"
                     style={{
                       borderRadius: '2px',
                       border: `1px solid ${isActive ? PEACH : LINE}`,
-                      opacity: outOfStock ? 0.4 : 1,
+                      opacity: colorSoldOut ? 0.45 : 1,
                     }}
                   >
-                    <span
-                      className="w-6 h-6 rounded-full shrink-0"
-                      style={{
-                        backgroundColor: c.hex || '#ddd',
-                        boxShadow: isActive ? `0 0 0 2px ${PAPER}, 0 0 0 3.5px ${PEACH}` : `0 0 0 1px ${LINE}`,
-                      }}
-                      title={c.name}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs truncate" style={{ color: INK }}>{c.name}</p>
-                      <p className="text-[10px]" style={{ color: INK_SOFT }}>
-                        {outOfStock ? 'Out of stock' : stock != null ? `${stock} left` : ''}
-                      </p>
+                    <div className="flex items-center gap-2.5 mb-2.5">
+                      <span
+                        className="w-6 h-6 rounded-full shrink-0"
+                        style={{
+                          backgroundColor: c.hex || '#ddd',
+                          boxShadow: isActive ? `0 0 0 2px ${PAPER}, 0 0 0 3.5px ${PEACH}` : `0 0 0 1px ${LINE}`,
+                        }}
+                        title={c.name}
+                      />
+                      <p className="text-sm flex-1 truncate" style={{ color: INK }}>{c.name}</p>
+                      <span className="text-[11px]" style={{ color: total > 0 ? PEACH : INK_SOFT }}>
+                        {colorSoldOut ? 'Out of stock' : total > 0 ? `${total} selected` : c.stock != null ? `${c.stock} left` : ''}
+                      </span>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        disabled={qty === 0}
-                        onClick={() => updateQty(c.name, -1)}
-                        aria-label={`Decrease ${c.name} quantity`}
-                        className="w-7 h-7 rounded-full flex items-center justify-center disabled:opacity-30"
-                        style={{ border: `1px solid ${LINE}`, color: INK }}
-                      >
-                        <Minus size={12} strokeWidth={2} />
-                      </button>
-                      <span className="w-4 text-center text-xs font-medium" style={{ color: INK }}>{qty}</span>
-                      <button
-                        disabled={outOfStock || remaining === 0}
-                        onClick={() => updateQty(c.name, 1)}
-                        aria-label={`Increase ${c.name} quantity`}
-                        className="w-7 h-7 rounded-full flex items-center justify-center disabled:opacity-30"
-                        style={{ border: `1px solid ${LINE}`, color: INK }}
-                      >
-                        <Plus size={12} strokeWidth={2} />
-                      </button>
-                    </div>
+
+                    {sizes.length > 0 ? (
+                      <div className="flex flex-wrap gap-2" onClick={(e) => e.stopPropagation()}>
+                        {sizes.map(({ size, stock }) => {
+                          const qty = selection[keyOf(c.name, size)] || 0;
+                          const sizeSoldOut = stock != null && stock <= 0;
+                          const disabledPlus = colorSoldOut || sizeSoldOut || remaining === 0;
+                          return (
+                            <div
+                              key={size}
+                              className="flex flex-col items-center px-2 py-1.5"
+                              style={{
+                                borderRadius: '2px',
+                                border: `1px solid ${qty > 0 ? PEACH : LINE}`,
+                                background: qty > 0 ? PEACH_LIGHT : PAPER,
+                                opacity: sizeSoldOut ? 0.4 : 1,
+                                minWidth: '88px',
+                              }}
+                            >
+                              <span className="text-xs font-medium" style={{ color: INK }}>{size}</span>
+                              <span className="text-[10px] h-3" style={{ color: INK_SOFT }}>
+                                {sizeSoldOut ? 'Sold out' : stock != null && stock <= 5 ? `${stock} left` : ''}
+                              </span>
+                              <div className="flex items-center gap-1.5 mt-1">
+                                <button
+                                  disabled={qty === 0}
+                                  onClick={() => updateQty(c.name, size, -1)}
+                                  aria-label={`Decrease ${c.name} ${size}`}
+                                  className="w-6 h-6 rounded-full flex items-center justify-center disabled:opacity-30"
+                                  style={{ border: `1px solid ${LINE}`, color: INK, background: PAPER }}
+                                >
+                                  <Minus size={11} strokeWidth={2} />
+                                </button>
+                                <span className="w-4 text-center text-xs font-medium" style={{ color: INK }}>{qty}</span>
+                                <button
+                                  disabled={disabledPlus}
+                                  onClick={() => updateQty(c.name, size, 1)}
+                                  aria-label={`Increase ${c.name} ${size}`}
+                                  className="w-6 h-6 rounded-full flex items-center justify-center disabled:opacity-30"
+                                  style={{ border: `1px solid ${LINE}`, color: INK, background: PAPER }}
+                                >
+                                  <Plus size={11} strokeWidth={2} />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-xs" style={{ color: INK_SOFT }}>No sizes available for this color.</p>
+                    )}
                   </div>
                 );
               })}
             </div>
           ) : (
             <p className="text-xs" style={{ color: INK_SOFT }}>No colors available for this combo yet.</p>
+          )}
+
+          {/* Summary of the current mix */}
+          {entries.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-3">
+              {entries
+                .slice()
+                .sort((a, b) => a.name.localeCompare(b.name) || a.size.localeCompare(b.size))
+                .map((e) => (
+                  <span
+                    key={keyOf(e.name, e.size)}
+                    className="text-[11px] px-2 py-0.5"
+                    style={{ background: PEACH_LIGHT, color: INK, borderRadius: '2px' }}
+                  >
+                    {e.name} · {e.size} × {e.qty}
+                  </span>
+                ))}
+            </div>
           )}
         </div>
 

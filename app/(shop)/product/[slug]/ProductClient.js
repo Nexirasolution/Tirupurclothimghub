@@ -170,6 +170,7 @@ export default function ProductClient({ data }) {
         ? { id: selectedShawl._id, name: selectedShawl.name, price: selectedShawl.price, image: selectedShawl.image, sku: selectedShawl.sku }
         : null,
       price: unitPrice,
+      weight: product.weight || 0, // grams per piece
       qty,
       stock,
     };

@@ -12,9 +12,11 @@ export async function GET(req) {
   const all = searchParams.get('all');
   const query = all ? {} : { isActive: true };
   const combos = await Combo.find(query)
-    .populate('products.product', 'name slug variants')
-    .populate('baseProduct', 'name slug variants')
-    .sort({ createdAt: -1 });
+    // weight is included so shipping can use each product's manual weight
+    .populate('products.product', 'name slug variants weight')
+    .populate('baseProduct', 'name slug variants weight')
+    .sort({ createdAt: -1 })
+    .lean();
   return NextResponse.json({ combos });
 }
 
@@ -42,7 +44,10 @@ export const POST = requireAdmin(async (req) => {
 
   try {
     const slug = slugify(body.name, { lower: true }) + '-' + Date.now().toString().slice(-4);
-    const combo = await Combo.create({ ...body, slug });
+    // Manual weights (grams), never negative
+    const weight = Math.max(0, Number(body.weight) || 0);
+    const pieceWeight = Math.max(0, Number(body.pieceWeight) || 0);
+    const combo = await Combo.create({ ...body, slug, weight, pieceWeight });
     return NextResponse.json({ combo }, { status: 201 });
   } catch (err) {
     return NextResponse.json({ error: err.message || 'Failed to create combo' }, { status: 400 });

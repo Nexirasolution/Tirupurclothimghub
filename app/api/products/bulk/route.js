@@ -31,6 +31,7 @@ export const POST = requireAdmin(async (req) => {
       skuPrefix,
       description = '',
       fabric = '',
+      weight = 0,
       price,
       compareAtPrice = 0,
       sizes = [],
@@ -167,6 +168,7 @@ export const POST = requireAdmin(async (req) => {
           description,
           category: cat._id,
           fabric,
+          weight: Math.max(0, Number(weight) || 0), // grams per piece
           tags,
           variants: [variant],
           // lowest of the default price and every per-size price

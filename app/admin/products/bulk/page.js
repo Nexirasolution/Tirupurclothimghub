@@ -14,6 +14,7 @@ export default function BulkAddProductsPage() {
   const [skuPrefix, setSkuPrefix] = useState(''); // short code used to build SKUs, e.g. "MT" -> MT001
   const [description, setDescription] = useState('');
   const [fabric, setFabric] = useState('');
+  const [weight, setWeight] = useState(''); // grams, one piece — applied to every product in the batch
   const [price, setPrice] = useState('');
   const [compareAtPrice, setCompareAtPrice] = useState('');
   const [stockBySize, setStockBySize] = useState({}); // { S: 10, M: 10, ... }
@@ -182,6 +183,7 @@ export default function BulkAddProductsPage() {
           skuPrefix,
           description,
           fabric,
+          weight: Math.max(0, Number(weight) || 0),
           price: Number(price),
           compareAtPrice: Number(compareAtPrice) || 0,
           sizes,
@@ -297,13 +299,27 @@ export default function BulkAddProductsPage() {
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Fabric</label>
-          <input
-            value={fabric}
-            onChange={(e) => setFabric(e.target.value)}
-            className="w-full px-3 py-2 text-sm rounded-lg border border-brand-ink/10 outline-none"
-          />
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Fabric</label>
+            <input
+              value={fabric}
+              onChange={(e) => setFabric(e.target.value)}
+              className="w-full px-3 py-2 text-sm rounded-lg border border-brand-ink/10 outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Weight in grams (one piece)</label>
+            <input
+              type="number"
+              min="0"
+              value={weight}
+              onChange={(e) => setWeight(e.target.value)}
+              placeholder="e.g. 450"
+              className="w-full px-3 py-2 text-sm rounded-lg border border-brand-ink/10 outline-none"
+            />
+            <p className="text-xs text-brand-ink/40 mt-1">Applied to every product in this batch. Used for shipping.</p>
+          </div>
         </div>
 
         <div className="grid sm:grid-cols-2 gap-4">

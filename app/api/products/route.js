@@ -127,7 +127,8 @@ export const POST = requireAdmin(async (req) => {
       ? computeBasePrice(body.variants)
       : body.basePrice || 0;
 
-    const product = await Product.create({ ...body, slug, sku, basePrice });
+    const weight = Math.max(0, Number(body.weight) || 0); // grams, manual entry
+    const product = await Product.create({ ...body, slug, sku, basePrice, weight });
 
     revalidateTag('products');
     return NextResponse.json({ product }, { status: 201 });

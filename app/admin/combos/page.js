@@ -9,6 +9,8 @@ const emptyForm = {
   type: 'multi-product',
   name: '', images: [], description: '',
   comboPrice: '', originalPrice: '', piecesPerCombo: '', productIds: [],
+  weight: '',       // grams — total weight of ONE multi-product combo
+  pieceWeight: '',  // grams — weight of ONE piece in a color pack
   baseProduct: '', colors: [], packOptions: [], sizeChart: [],
 };
 
@@ -27,6 +29,12 @@ export default function AdminCombosPage() {
     setProducts((await r2.json()).products || []);
   }
   useEffect(() => { load(); }, []);
+
+  // Sum of the manual weights of the products ticked for this combo (helper for the admin)
+  const selectedWeightSum = form.productIds.reduce(
+    (sum, id) => sum + (Number(products.find((p) => p._id === id)?.weight) || 0),
+    0
+  );
 
   function toggleProduct(id) {
     setForm((f) => ({
@@ -57,6 +65,8 @@ export default function AdminCombosPage() {
       originalPrice: combo.originalPrice ?? '',
       piecesPerCombo: combo.piecesPerCombo || '',
       productIds: (combo.products || []).map((p) => (typeof p.product === 'object' ? p.product?._id : p.product) || p._id || p),
+      weight: combo.weight > 0 ? combo.weight : '',
+      pieceWeight: combo.pieceWeight > 0 ? combo.pieceWeight : '',
       baseProduct: (typeof combo.baseProduct === 'object' ? combo.baseProduct?._id : combo.baseProduct) || '',
       colors: combo.colors || [],
       packOptions: combo.packOptions || [],
@@ -108,6 +118,8 @@ export default function AdminCombosPage() {
           colors: form.colors,
           packOptions: form.packOptions,
           sizeChart: form.sizeChart,
+          // grams per piece; blank = use the base product's weight
+          pieceWeight: Math.max(0, Number(form.pieceWeight) || 0),
         }
       : {
           type: 'multi-product',
@@ -116,11 +128,11 @@ export default function AdminCombosPage() {
           description: form.description,
           comboPrice: Number(form.comboPrice),
           originalPrice: Number(form.originalPrice) || 0,
-          // Pieces in ONE combo — drives shipping weight. Defaults to the
-          // number of selected products when left blank.
           piecesPerCombo: Number(form.piecesPerCombo) || form.productIds.length,
           products: form.productIds.map((id) => ({ product: id })),
           sizeChart: form.sizeChart,
+          // grams for ONE combo; blank = sum of the products' own weights
+          weight: Math.max(0, Number(form.weight) || 0),
         };
 
     const isEditing = Boolean(editingId);
@@ -212,7 +224,7 @@ export default function AdminCombosPage() {
 
           {form.type === 'multi-product' ? (
             <>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <input required type="number" placeholder="Combo price ₹" className="border rounded-lg px-3 py-2 text-sm" value={form.comboPrice} onChange={(e) => setForm({ ...form, comboPrice: e.target.value })} />
                 <input type="number" placeholder="Original price ₹" className="border rounded-lg px-3 py-2 text-sm" value={form.originalPrice} onChange={(e) => setForm({ ...form, originalPrice: e.target.value })} />
                 <input
@@ -223,15 +235,38 @@ export default function AdminCombosPage() {
                   value={form.piecesPerCombo}
                   onChange={(e) => setForm({ ...form, piecesPerCombo: e.target.value })}
                 />
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Combo weight (g)"
+                  className="border rounded-lg px-3 py-2 text-sm"
+                  value={form.weight}
+                  onChange={(e) => setForm({ ...form, weight: e.target.value })}
+                />
               </div>
               <p className="text-[10px] text-neutral-400 -mt-1">
-                Pieces in combo = total items the customer receives in ONE combo. Shipping weight is calculated from this. Leave blank to use the number of selected products.
+                Pieces in combo = total items the customer receives in ONE combo. Combo weight = total weight of ONE combo in grams, used for shipping.
+                Leave weight blank to add up the selected products' own weights.
               </p>
+              {selectedWeightSum > 0 && (
+                <p className="text-[11px] text-neutral-500 -mt-1">
+                  Selected products add up to <b>{selectedWeightSum} g</b>.{' '}
+                  <button
+                    type="button"
+                    className="underline text-brand-magenta"
+                    onClick={() => setForm((f) => ({ ...f, weight: String(selectedWeightSum) }))}
+                  >
+                    Use this weight
+                  </button>
+                </p>
+              )}
               <p className="text-sm font-medium">Select products in this combo:</p>
               <div className="max-h-40 overflow-y-auto border rounded-lg p-2 space-y-1">
                 {products.map((p) => (
                   <label key={p._id} className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" checked={form.productIds.includes(p._id)} onChange={() => toggleProduct(p._id)} /> {p.name}
+                    <input type="checkbox" checked={form.productIds.includes(p._id)} onChange={() => toggleProduct(p._id)} />
+                    {p.name}
+                    {p.weight > 0 && <span className="text-[10px] text-neutral-400">· {p.weight} g</span>}
                   </label>
                 ))}
               </div>
@@ -239,9 +274,21 @@ export default function AdminCombosPage() {
           ) : (
             <>
               <ColorPackFields form={form} setForm={setForm} products={products} />
-              <p className="text-[10px] text-neutral-400">
-                For color packs, shipping weight uses the pack size (e.g. Pack of 10 = 10 pieces) automatically.
-              </p>
+              <div>
+                <label className="block text-sm font-medium mb-1">Weight per piece (grams)</label>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="e.g. 250"
+                  className="w-full sm:w-60 border rounded-lg px-3 py-2 text-sm"
+                  value={form.pieceWeight}
+                  onChange={(e) => setForm({ ...form, pieceWeight: e.target.value })}
+                />
+                <p className="text-[10px] text-neutral-400 mt-1">
+                  Pack weight = pieces in the pack × this value (e.g. Pack of 10 × 250 g = 2500 g).
+                  Leave blank to use the base product's own weight.
+                </p>
+              </div>
             </>
           )}
 
@@ -260,17 +307,23 @@ export default function AdminCombosPage() {
           const pieceLabel = c.type === 'color-pack'
             ? null
             : `${c.piecesPerCombo || c.products?.length || 1} pcs`;
+          const weightLabel = c.type === 'color-pack'
+            ? (c.pieceWeight > 0 ? `${c.pieceWeight} g/pc` : null)
+            : (c.weight > 0 ? `${c.weight} g` : null);
           return (
             <div key={c._id} className="card-soft overflow-hidden">
               <div className="h-32 bg-brand-cream">{cover && <img src={cover} alt={c.name} className="w-full h-full object-cover" />}</div>
               <div className="p-3">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <p className="font-medium text-sm">{c.name}</p>
                   {c.type === 'color-pack' && (
                     <span className="text-[10px] bg-pink-50 text-pink-600 px-1.5 py-0.5 rounded-full">Color Pack</span>
                   )}
                   {pieceLabel && (
                     <span className="text-[10px] bg-neutral-100 text-neutral-600 px-1.5 py-0.5 rounded-full">{pieceLabel}</span>
+                  )}
+                  {weightLabel && (
+                    <span className="text-[10px] bg-neutral-100 text-neutral-600 px-1.5 py-0.5 rounded-full">{weightLabel}</span>
                   )}
                 </div>
                 <p className="text-brand-magenta font-semibold text-sm">{priceLabel}</p>

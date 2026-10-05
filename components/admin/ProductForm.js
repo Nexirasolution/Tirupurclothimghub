@@ -255,7 +255,7 @@ export default function ProductForm({ initial, productId }) {
   const [categories, setCategories] = useState([]);
   const [form, setForm] = useState(() => {
     const base = initial || {
-      name: '', slug: '', sku: '', description: '', category: '', fabric: '', tags: [],
+      name: '', slug: '', sku: '', description: '', category: '', fabric: '', tags: [], weight: '',
       variants: [emptyVariant()],
       sizeChart: [],
       sleeveOptions: [],
@@ -267,6 +267,7 @@ export default function ProductForm({ initial, productId }) {
     };
     return {
       ...base,
+      weight: base.weight > 0 ? base.weight : '',
       variants: normalizeVariants(base.variants),
       sizeChart: normalizeSizeChart(base.sizeChart),
       sleeveOptions: base.sleeveOptions || [],
@@ -408,6 +409,7 @@ export default function ProductForm({ initial, productId }) {
     // based on the product's category (see /api/products and /api/products/[id]).
     const payload = {
       ...form,
+      weight: Math.max(0, Number(form.weight) || 0), // grams, manual entry
       sizeChart: form.sizeChart || [],
       sleeveOptions: form.sleeveOptions || [],
       zipOptions: form.zipOptions || [],
@@ -516,6 +518,20 @@ export default function ProductForm({ initial, productId }) {
               style={inputStyle}
               value={Array.isArray(form.tags) ? form.tags.join(', ') : ''}
               onChange={(e) => update('tags', e.target.value.split(',').map((t) => t.trim()).filter(Boolean))}
+              onFocus={(e) => (e.target.style.borderColor = PEACH)}
+              onBlur={(e) => (e.target.style.borderColor = LINE)}
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Weight (grams)</label>
+            <input
+              type="number"
+              min="0"
+              step="1"
+              placeholder="e.g. 450 (weight of one piece)"
+              style={inputStyle}
+              value={form.weight ?? ''}
+              onChange={(e) => update('weight', e.target.value)}
               onFocus={(e) => (e.target.style.borderColor = PEACH)}
               onBlur={(e) => (e.target.style.borderColor = LINE)}
             />

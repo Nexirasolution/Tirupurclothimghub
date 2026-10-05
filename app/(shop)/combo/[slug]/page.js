@@ -5,7 +5,7 @@ import { formatINR } from '@/lib/utils';
 import AddComboButton from '@/components/AddComboButton';
 import ColorPackSelector from '@/components/ColorPackSelector';
 import ComboImageGallery from '@/components/ComboImageGallery';
-import { Package, Tag, CheckCircle2, RotateCcw, Shield, Truck } from 'lucide-react';
+import { Package, Tag, CheckCircle2, RotateCcw, Shield } from 'lucide-react';
 
 const INK = '#241B21';
 const INK_SOFT = '#9C877D';
@@ -141,14 +141,7 @@ export default async function ComboPage({ params }) {
         </div>
       )}
 
-      <div className="mt-10 sm:mt-14 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-        <div className="flex gap-3 items-start py-3" style={{ borderTop: `1px solid ${LINE}` }}>
-          <Truck size={18} style={{ color: PEACH }} className="shrink-0 mt-0.5" strokeWidth={1.5} />
-          <div>
-            <p className="text-sm" style={{ color: INK }}>Free delivery</p>
-            <p className="text-xs mt-0.5" style={{ color: INK_SOFT }}>Free shipping on all combo orders across India.</p>
-          </div>
-        </div>
+      {/* <div className="mt-10 sm:mt-14 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <div className="flex gap-3 items-start py-3" style={{ borderTop: `1px solid ${LINE}` }}>
           <RotateCcw size={18} style={{ color: PEACH }} className="shrink-0 mt-0.5" strokeWidth={1.5} />
           <div>
@@ -163,7 +156,7 @@ export default async function ComboPage({ params }) {
             <p className="text-xs mt-0.5" style={{ color: INK_SOFT }}>Every piece is quality-checked before dispatch.</p>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {!isColorPack && plain.originalPrice > plain.comboPrice && (
         <div className="mt-8 sm:mt-10 pt-6 text-center" style={{ borderTop: `1px solid ${LINE}` }}>

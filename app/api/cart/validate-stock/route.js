@@ -11,7 +11,8 @@ import Combo from '@/models/Combo';
 // are unavailable, out of stock, or short on quantity. Handles three kinds:
 //   - normal product lines (variant/size + pant/shawl add-on stock)
 //   - multi-product combo lines
-//   - color-pack combo lines (pack stock + per-color stock)
+//   - color-pack combo lines (pack stock + per color/size stock; one pack can
+//     be split across several colors AND sizes)
 //
 // Every issue echoes the fields cartKey() uses, so the checkout page can
 // find the exact cart line to remove or adjust.
@@ -123,14 +124,27 @@ export async function POST(req) {
         continue;
       }
 
-      // Color pack
+      // ───────────── Color pack (colors AND sizes can be mixed) ─────────────
       const packSize = Number(item.packDetails?.packSize);
       const pack = (combo.packOptions || []).find((p) => Number(p.size) === packSize);
-      const colorsPicked = item.packDetails?.colors || [];
-      const pickedTotal = colorsPicked.reduce((s, c) => s + (Number(c.qty) || 0), 0);
 
-      // Pack size gone, or the color mix doesn't add up to the pack
-      if (!pack || colorsPicked.length === 0 || pickedTotal !== packSize) {
+      // Each entry: { name, qty, size }. Entries without a size (older carts)
+      // fall back to the line's single size. Merge duplicate color+size rows.
+      const merged = new Map();
+      for (const c of item.packDetails?.colors || []) {
+        const qty = Number(c.qty) || 0;
+        if (qty <= 0) continue;
+        const size = c.size || item.size || '';
+        const key = `${c.name}||${size}`;
+        const prev = merged.get(key);
+        if (prev) prev.qty += qty;
+        else merged.set(key, { name: c.name, size, qty });
+      }
+      const picked = [...merged.values()];
+      const pickedTotal = picked.reduce((s, c) => s + c.qty, 0);
+
+      // Pack size gone, a piece has no size, or the mix doesn't add up to the pack
+      if (!pack || picked.length === 0 || pickedTotal !== packSize || picked.some((c) => !c.size)) {
         issues.push(makeIssue(item, 'unavailable'));
         continue;
       }
@@ -145,37 +159,45 @@ export async function POST(req) {
       // How many packs the pack option itself can still sell (null = unlimited)
       if (pack.stock != null) caps.push(pack.stock);
 
+      const perColorPerPack = new Map(); // color -> pieces of that color in ONE pack (all sizes)
       let unavailable = false;
-      for (const picked of colorsPicked) {
-        const colorOpt = (combo.colors || []).find((c) => c.name === picked.name);
+
+      for (const c of picked) {
+        const colorOpt = (combo.colors || []).find((o) => o.name === c.name);
         if (!colorOpt) {
           unavailable = true;
           break;
         }
 
-        // Same rule as the storefront: admin-set color stock wins,
-        // live variant/size stock is the fallback.
-        let colorStock;
-        if (colorOpt.stock != null) {
-          colorStock = colorOpt.stock;
-        } else {
-          const variant = findVariant(baseProduct, {
-            variantId: colorOpt.variantId,
-            colorName: colorOpt.name,
-          });
-          const sizeEntry = variant?.sizes?.find((s) => s.size === item.size);
-          colorStock = sizeEntry?.stock || 0;
+        const variant = findVariant(baseProduct, {
+          variantId: colorOpt.variantId,
+          colorName: colorOpt.name,
+        });
+        const sizeEntry = variant?.sizes?.find((s) => s.size === c.size);
+        if (!variant || !sizeEntry) {
+          unavailable = true; // this color doesn't exist in that size
+          break;
         }
 
-        // Each pack uses `picked.qty` of this color, so packs sellable = floor(stock / picked.qty)
-        const perPack = Number(picked.qty) || 1;
-        caps.push(Math.floor(colorStock / perPack));
+        // Real garments come out of this color's stock in THIS size
+        caps.push(Math.floor((sizeEntry.stock || 0) / c.qty));
+
+        perColorPerPack.set(c.name, (perColorPerPack.get(c.name) || 0) + c.qty);
       }
 
       if (unavailable) {
         issues.push(makeIssue(item, 'unavailable'));
         continue;
       }
+
+      // Admin-set color stock (when present) caps the color across ALL its sizes
+      for (const [name, perPack] of perColorPerPack) {
+        const colorOpt = (combo.colors || []).find((o) => o.name === name);
+        if (colorOpt?.stock != null) {
+          caps.push(Math.floor(colorOpt.stock / perPack));
+        }
+      }
+
       const issue = checkCaps(item, caps);
       if (issue) issues.push(issue);
       continue;
