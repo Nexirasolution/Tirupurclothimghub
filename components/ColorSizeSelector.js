@@ -55,7 +55,7 @@ function AddonSelector({ label, options, activeId, onChange, formatINR }) {
                   className="w-6 h-6 rounded-sm overflow-hidden shrink-0"
                   style={{ background: PEACH_WASH }}
                 >
-                  <img src={opt.image} alt="" className="w-full h-full object-cover" />
+                  <img src={opt.image} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                 </span>
               )}
               {opt.name}
@@ -69,7 +69,7 @@ function AddonSelector({ label, options, activeId, onChange, formatINR }) {
 
       {active?.image && (
         <div className="mt-2.5 w-16 h-16 rounded-md overflow-hidden" style={{ background: PEACH_WASH }}>
-          <img src={active.image} alt={active.name} className="w-full h-full object-cover" />
+          <img src={active.image} alt={active.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
         </div>
       )}
       {active && active.stock > 0 && active.stock <= 5 && (
@@ -132,9 +132,12 @@ export default function ColorSizeSelector({
                   key={v._id}
                   onClick={() => onColorChange(v)}
                   title={v.color}
+                  aria-label={v.color}
+                  aria-pressed={isActive}
                   className="relative w-8 h-8 rounded-full transition-transform"
                   style={{
                     backgroundColor: v.colorHex || '#ccc',
+                    border: '1px solid #000', // thin black border
                     transform: isActive ? 'scale(1.08)' : 'scale(1)',
                   }}
                 >
@@ -201,9 +204,9 @@ export default function ColorSizeSelector({
           </p>
         )}
 
-        {/* Size chart — shown directly below the size selector. Resolved by
-            the parent as product.sizeChart, falling back to category.sizeChart.
-            Opens a swipeable carousel when there's more than one image. */}
+        {/* Size chart — resolved by the parent as product.sizeChart, falling
+            back to category.sizeChart. Opens a swipeable carousel when there's
+            more than one image. */}
         {hasSizeChart && (
           <button
             type="button"
@@ -273,8 +276,7 @@ export default function ColorSizeSelector({
         </div>
       )}
 
-      {/* Pant selector — optional product-level add-on. "None" covers
-          "without pant". Price shown is added on top of the base price. */}
+      {/* Pant selector — optional add-on. "None" covers "without pant". */}
       <AddonSelector
         label="Pant"
         options={pantOptions}

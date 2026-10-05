@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { dbConnect } from '@/lib/mongodb';
 import Product from '@/models/Product';
 import Category from '@/models/Category';
@@ -18,18 +19,14 @@ export async function GET(req) {
 
     const categorySlug = searchParams.get('category');
     if (categorySlug) {
-      const cat = await Category.findOne({ slug: categorySlug });
+      const cat = await Category.findOne({ slug: categorySlug }).select('_id parent').lean();
       if (!cat) return NextResponse.json({ products: [], total: 0 });
 
       if (cat.parent) {
-        // Subcategory: only its own products.
         query.category = cat._id;
       } else {
-        // Main category: include its own products plus every subcategory's,
-        // so browsing a main category shows everything underneath it too.
-        const subcats = await Category.find({ parent: cat._id }).select('_id');
-        const categoryIds = [cat._id, ...subcats.map((c) => c._id)];
-        query.category = { $in: categoryIds };
+        const subcats = await Category.find({ parent: cat._id }).select('_id').lean();
+        query.category = { $in: [cat._id, ...subcats.map((c) => c._id)] };
       }
     }
 
@@ -50,16 +47,10 @@ export async function GET(req) {
     if (flag === 'active') query.isActiveSeller = true;
     if (flag === 'featured') query.isFeatured = true;
 
-    // "New Arrivals" hybrid fallback:
-    // 1. Try last 30 days within the current query scope (category/size/price already applied).
-    // 2. If nothing, widen to 90 days.
-    // 3. If still nothing, drop the date filter entirely — customer sees the
-    //    most recently added items regardless of age, sorted newest-first,
-    //    instead of an empty page.
+    // "New Arrivals" fallback: 30 days -> 90 days -> no date filter.
     if (flag === 'newarrival') {
       const cutoff30 = new Date();
       cutoff30.setDate(cutoff30.getDate() - 30);
-
       const cutoff90 = new Date();
       cutoff90.setDate(cutoff90.getDate() - 90);
 
@@ -68,13 +59,8 @@ export async function GET(req) {
         Product.countDocuments({ ...query, createdAt: { $gte: cutoff90 } }),
       ]);
 
-      if (count30 > 0) {
-        query.createdAt = { $gte: cutoff30 };
-      } else if (count90 > 0) {
-        query.createdAt = { $gte: cutoff90 };
-      }
-      // else: no date filter added — falls through to sort: newest below,
-      // returning the N most recent products in scope regardless of age.
+      if (count30 > 0) query.createdAt = { $gte: cutoff30 };
+      else if (count90 > 0) query.createdAt = { $gte: cutoff90 };
     }
 
     const sort = searchParams.get('sort') || 'newest';
@@ -83,20 +69,19 @@ export async function GET(req) {
       priceLow: { basePrice: 1 },
       priceHigh: { basePrice: -1 },
       popular: { soldCount: -1 },
-      rating: { rating: -1 }
+      rating: { rating: -1 },
     };
 
     const limitParam = searchParams.get('limit');
     const fetchAll = limitParam === 'all';
-    const page = Number(searchParams.get('page') || 1);
+    const page = Math.max(1, Number(searchParams.get('page') || 1));
     const limit = Number(limitParam || 24);
 
-    // Added `sizeChart` so any storefront view built off this list (e.g. a
-    // quick-view modal) can resolve the same product -> category size-chart
-    // fallback used on the full product detail page.
+    // sizeChart kept in the populate so quick-view can use the category fallback.
     let productsQuery = Product.find(query)
       .populate('category', 'name slug type sizeChart')
-      .sort(sortMap[sort] || sortMap.newest);
+      .sort(sortMap[sort] || sortMap.newest)
+      .lean(); // plain objects: much faster than hydrating Mongoose documents
 
     if (!fetchAll) {
       productsQuery = productsQuery.skip((page - 1) * limit).limit(limit);
@@ -104,15 +89,18 @@ export async function GET(req) {
 
     const [products, total] = await Promise.all([
       productsQuery,
-      Product.countDocuments(query)
+      Product.countDocuments(query),
     ]);
 
-    return NextResponse.json({
-      products,
-      total,
-      page: fetchAll ? 1 : page,
-      pages: fetchAll ? 1 : Math.ceil(total / limit),
-    });
+    return NextResponse.json(
+      {
+        products,
+        total,
+        page: fetchAll ? 1 : page,
+        pages: fetchAll ? 1 : Math.ceil(total / limit),
+      },
+      { headers: { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120' } }
+    );
   } catch (err) {
     console.error('GET /api/products error:', err);
     return NextResponse.json({ error: err.message || 'Failed to fetch products' }, { status: 500 });
@@ -130,17 +118,16 @@ export const POST = requireAdmin(async (req) => {
     const sku = await generateSku(body.category);
 
     const slug = body.slug ? slugify(body.slug, { lower: true }) : slugify(body.name, { lower: true });
-    const exists = await Product.findOne({ slug });
+    const exists = await Product.exists({ slug });
     if (exists) return NextResponse.json({ error: 'A product with this slug already exists' }, { status: 409 });
 
     const basePrice = body.variants?.length
       ? Math.min(...body.variants.map((v) => v.price))
       : body.basePrice || 0;
 
-    // body already carries sizeChart / isReadyToShip / sleeveOptions /
-    // zipOptions / pantOptions / shawlOptions when the admin form sends
-    // them — no extra handling needed here, they're embedded subdocuments.
     const product = await Product.create({ ...body, slug, sku, basePrice });
+
+    revalidateTag('products');
     return NextResponse.json({ product }, { status: 201 });
   } catch (err) {
     console.error('POST /api/products error:', err);
