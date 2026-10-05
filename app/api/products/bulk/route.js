@@ -1,35 +1,26 @@
 import { NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { dbConnect } from '@/lib/mongodb';
 import Product from '@/models/Product';
 import Category from '@/models/Category';
 import slugify from 'slugify';
 import { requireAdmin } from '@/lib/apiAuth';
+import { computeBasePrice } from '@/lib/pricing';
 
 // POST /api/products/bulk
 // body: {
 //   category, skuPrefix, description, fabric,
-//   price, compareAtPrice, sizes: [{ size, stock }],
+//   price, compareAtPrice, sizes: [{ size, stock, price? }],
 //   images: [url, url, ...], tags,
 //   isReadyToShip, sizeChart: [url, url, ...],
 //   sleeveOptions: [ 'Full Sleeve' | 'Half Sleeve' | 'Elbow Sleeve' | 'Sleeveless', ... ],
 //   zipOptions: [ 'With Zip' | 'Without Zip', ... ]
 // }
 // Creates ONE product per image.
-// - Title = auto-derived from the CATEGORY name + zero-padded number,
-//   e.g. category "Silk Sarees" -> SILKSAREES001, SILKSAREES002...
-//   (continues from the highest existing number for that title-code in
-//   that category, so repeated bulk uploads don't collide)
-// - SKU = admin-typed short code + zero-padded number, e.g. "MT" -> MT001, MT002...
-//   (continues from the highest existing SKU with that code, globally,
-//   since SKU is a global-unique field)
-// - isReadyToShip / sizeChart / sleeveOptions / zipOptions, if provided, are
-//   applied identically to every product created in this batch.
-//   sizeChart is optional — if omitted, the storefront falls back to the
-//   category's own size chart images. sleeveOptions/zipOptions are optional
-//   product-level attributes — if omitted, no sleeve/zip selector shows on
-//   the storefront for these products.
-//   Pant/Shawl add-on options aren't set here (they're per-product) — set
-//   them afterward on each product's own edit page.
+// - Title = auto-derived from the CATEGORY name + zero-padded number.
+// - SKU = admin-typed short code + zero-padded number.
+// - Each size may carry its own optional `price`; blank/0 => the default `price` is used.
+// - isReadyToShip / sizeChart / sleeveOptions / zipOptions apply to every product in the batch.
 export const POST = requireAdmin(async (req) => {
   try {
     await dbConnect();
@@ -63,23 +54,23 @@ export const POST = requireAdmin(async (req) => {
     if (!price || Number(price) <= 0) {
       return NextResponse.json({ error: 'Price is required' }, { status: 400 });
     }
+
+    // Per-size price: only kept when it's a positive number, otherwise null (= use default price)
     const sizeEntries = (sizes || [])
       .filter((s) => s.size)
-      .map((s) => ({ size: s.size, stock: Number(s.stock) || 0 }));
+      .map((s) => ({
+        size: s.size,
+        stock: Number(s.stock) || 0,
+        price: Number(s.price) > 0 ? Number(s.price) : null,
+      }));
     if (sizeEntries.length === 0) {
       return NextResponse.json({ error: 'At least one size with stock is required' }, { status: 400 });
     }
 
-    // Accept either an array of image URLs (current format) or a single
-    // legacy string, so older clients can't accidentally wipe the field.
     const sizeChartImages = Array.isArray(sizeChart)
       ? sizeChart.filter(Boolean)
       : (sizeChart ? [sizeChart] : []);
 
-    // Validate sleeve/zip options against the schema's allowed enum values,
-    // so a bad value from a stale client can't silently fail product
-    // creation for the whole batch (Mongoose enum validation would reject
-    // the entire document otherwise).
     const ALLOWED_SLEEVE = ['Full Sleeve', 'Half Sleeve', 'Elbow Sleeve', 'Sleeveless'];
     const ALLOWED_ZIP = ['With Zip', 'Without Zip'];
     const sleeveOptionsClean = Array.isArray(sleeveOptions)
@@ -114,7 +105,7 @@ export const POST = requireAdmin(async (req) => {
     const existingTitles = await Product.find({
       category: cat._id,
       name: { $regex: `^${titleCode}\\d+$`, $options: 'i' },
-    }).select('name');
+    }).select('name').lean();
 
     let maxTitleNum = 0;
     const titleNumRe = new RegExp(`^${titleCode}(\\d+)$`, 'i');
@@ -123,10 +114,10 @@ export const POST = requireAdmin(async (req) => {
       if (match) maxTitleNum = Math.max(maxTitleNum, parseInt(match[1], 10));
     }
 
-    // Continue SKU numbering from the highest existing SKUCODE### (global, SKU is unique across all products)
+    // Continue SKU numbering from the highest existing SKUCODE### (global)
     const existingSkus = await Product.find({
       sku: { $regex: `^${skuCode}\\d+$`, $options: 'i' },
-    }).select('sku');
+    }).select('sku').lean();
 
     let maxSkuNum = 0;
     const skuNumRe = new RegExp(`^${skuCode}(\\d+)$`, 'i');
@@ -147,13 +138,14 @@ export const POST = requireAdmin(async (req) => {
       const sku = `${skuCode}${String(skuNum).padStart(3, '0')}`; // e.g. MT001
 
       try {
-        const slugTaken = await Product.findOne({ slug });
+        const [slugTaken, skuTaken] = await Promise.all([
+          Product.exists({ slug }),
+          Product.exists({ sku }),
+        ]);
         if (slugTaken) {
           errors.push({ name, error: 'A product with this generated name/slug already exists — skipped' });
           continue;
         }
-
-        const skuTaken = await Product.findOne({ sku });
         if (skuTaken) {
           errors.push({ name, error: `Generated SKU ${sku} already exists — skipped` });
           continue;
@@ -177,7 +169,8 @@ export const POST = requireAdmin(async (req) => {
           fabric,
           tags,
           variants: [variant],
-          basePrice: Number(price),
+          // lowest of the default price and every per-size price
+          basePrice: computeBasePrice([variant]),
           isReadyToShip: !!isReadyToShip,
           sizeChart: sizeChartImages,
           sleeveOptions: sleeveOptionsClean,
@@ -189,6 +182,8 @@ export const POST = requireAdmin(async (req) => {
         errors.push({ name, error: err.message });
       }
     }
+
+    if (created.length) revalidateTag('products'); // storefront shows new products immediately
 
     return NextResponse.json(
       { createdCount: created.length, created, errors },

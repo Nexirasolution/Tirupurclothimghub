@@ -17,27 +17,22 @@ export default function BulkAddProductsPage() {
   const [price, setPrice] = useState('');
   const [compareAtPrice, setCompareAtPrice] = useState('');
   const [stockBySize, setStockBySize] = useState({}); // { S: 10, M: 10, ... }
+  const [priceBySize, setPriceBySize] = useState({}); // { S: '', M: '1299', ... } blank = use default price
 
   // Applies to every product created in this batch
   const [isReadyToShip, setIsReadyToShip] = useState(false);
 
-  // Optional garment attributes — product-level, multi-select. Applied to
-  // every product in this batch. Leave both unchecked for categories where
-  // these don't apply (sarees, dupattas, etc). Customers will pick one of
-  // each on the storefront PDP if any are checked here.
   const [sleeveOptions, setSleeveOptions] = useState([]);
   const [zipOptions, setZipOptions] = useState([]);
 
-  // Optional — one or more shared size chart images applied to every
-  // product in this batch. Leave empty to fall back to the category's
-  // size chart instead.
   const [sizeChart, setSizeChart] = useState([]);
   const [sizeChartUploading, setSizeChartUploading] = useState(false);
 
   // Fallback for categories that have no predefined sizes configured
   const [manualSizeName, setManualSizeName] = useState('');
   const [manualSizeStock, setManualSizeStock] = useState('');
-  const [manualSizes, setManualSizes] = useState([]); // [{ size, stock }]
+  const [manualSizePrice, setManualSizePrice] = useState('');
+  const [manualSizes, setManualSizes] = useState([]); // [{ size, stock, price }]
 
   const [files, setFiles] = useState([]); // File[]
   const [previews, setPreviews] = useState([]); // objectURL[]
@@ -52,7 +47,6 @@ export default function BulkAddProductsPage() {
   }, []);
 
   const selectedCategory = categories.find((c) => c._id === category);
-  // Preview of what the auto-generated title prefix will look like, purely cosmetic
   const titlePreview = (selectedCategory?.name || '')
     .trim()
     .toUpperCase()
@@ -63,9 +57,11 @@ export default function BulkAddProductsPage() {
     const sizes = cat?.sizes || [];
     setCategorySizes(sizes);
     setStockBySize(Object.fromEntries(sizes.map((s) => [s, ''])));
+    setPriceBySize(Object.fromEntries(sizes.map((s) => [s, ''])));
     setManualSizes([]);
     setManualSizeName('');
     setManualSizeStock('');
+    setManualSizePrice('');
   }, [category, categories]);
 
   function toggleSleeveOption(opt) {
@@ -92,9 +88,10 @@ export default function BulkAddProductsPage() {
     const name = manualSizeName.trim().toUpperCase();
     if (!name) return toast.error('Enter a size name (e.g. S, M, Free Size)');
     if (manualSizes.some((s) => s.size === name)) return toast.error('That size is already added');
-    setManualSizes((prev) => [...prev, { size: name, stock: manualSizeStock || '0' }]);
+    setManualSizes((prev) => [...prev, { size: name, stock: manualSizeStock || '0', price: manualSizePrice }]);
     setManualSizeName('');
     setManualSizeStock('');
+    setManualSizePrice('');
   }
 
   function removeManualSize(name) {
@@ -110,8 +107,6 @@ export default function BulkAddProductsPage() {
     return data.url;
   }
 
-  // Size chart — supports multiple images. Selecting several files at once
-  // uploads each in turn and appends every resulting URL to the shared array.
   async function handleSizeChartFilesChange(e) {
     const selected = Array.from(e.target.files || []);
     if (selected.length === 0) return;
@@ -137,6 +132,9 @@ export default function BulkAddProductsPage() {
     setSizeChart((prev) => prev.filter((_, i) => i !== idx));
   }
 
+  // blank / 0 => null => the default price is used for that size
+  const toSizePrice = (v) => (v === '' || v == null || Number(v) <= 0 ? null : Number(v));
+
   async function handleSubmit(e) {
     e.preventDefault();
     setResult(null);
@@ -146,12 +144,16 @@ export default function BulkAddProductsPage() {
     if (!price || Number(price) <= 0) return toast.error('Enter a valid price');
     if (files.length === 0) return toast.error('Add at least one image');
 
-    // Combine predefined-size stock and manually-added sizes
+    // Combine predefined-size stock/price and manually-added sizes
     const fromPredefined = Object.entries(stockBySize)
       .filter(([, stock]) => stock !== '')
-      .map(([size, stock]) => ({ size, stock: Number(stock) }));
+      .map(([size, stock]) => ({ size, stock: Number(stock), price: toSizePrice(priceBySize[size]) }));
 
-    const fromManual = manualSizes.map((s) => ({ size: s.size, stock: Number(s.stock) || 0 }));
+    const fromManual = manualSizes.map((s) => ({
+      size: s.size,
+      stock: Number(s.stock) || 0,
+      price: toSizePrice(s.price),
+    }));
 
     const sizes = [...fromPredefined, ...fromManual];
 
@@ -262,7 +264,7 @@ export default function BulkAddProductsPage() {
 
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Price</label>
+            <label className="block text-sm font-medium mb-1">Default price</label>
             <input
               type="number"
               value={price}
@@ -270,6 +272,9 @@ export default function BulkAddProductsPage() {
               className="w-full px-3 py-2 text-sm rounded-lg border border-brand-ink/10 outline-none"
               required
             />
+            <p className="text-xs text-brand-ink/40 mt-1">
+              Used for every size that doesn't have its own price below.
+            </p>
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Compare-at price (optional)</label>
@@ -301,11 +306,6 @@ export default function BulkAddProductsPage() {
           />
         </div>
 
-        {/* Sleeve Type / Zip Type — product-level, multi-select. Applied to
-            every product in this batch. Leave both unchecked for categories
-            where these don't apply (sarees, dupattas, etc). If any are
-            checked, customers must choose one of each on the storefront
-            before adding the product to cart. */}
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-2">Sleeve Type Options (optional)</label>
@@ -390,11 +390,14 @@ export default function BulkAddProductsPage() {
           Mark all products in this batch as "Ready to Ship"
         </label>
 
-        {/* Predefined sizes from the category */}
+        {/* Predefined sizes from the category: stock + optional price per size */}
         {categorySizes.length > 0 && (
           <div>
-            <label className="block text-sm font-medium mb-2">Stock per size (applies to every product)</label>
-            <div className="flex flex-wrap gap-3">
+            <label className="block text-sm font-medium mb-1">Stock &amp; price per size (applies to every product)</label>
+            <p className="text-xs text-brand-ink/40 mb-2">
+              Leave a size's price blank to use the default price above.
+            </p>
+            <div className="flex flex-wrap gap-x-5 gap-y-3">
               {categorySizes.map((size) => (
                 <div key={size} className="flex items-center gap-2">
                   <span className="text-xs font-semibold w-8">{size}</span>
@@ -403,8 +406,16 @@ export default function BulkAddProductsPage() {
                     min="0"
                     value={stockBySize[size] ?? ''}
                     onChange={(e) => setStockBySize((prev) => ({ ...prev, [size]: e.target.value }))}
-                    placeholder="0"
+                    placeholder="Stock"
                     className="w-20 px-2 py-1.5 text-sm rounded-lg border border-brand-ink/10 outline-none"
+                  />
+                  <input
+                    type="number"
+                    min="0"
+                    value={priceBySize[size] ?? ''}
+                    onChange={(e) => setPriceBySize((prev) => ({ ...prev, [size]: e.target.value }))}
+                    placeholder="Price ₹"
+                    className="w-24 px-2 py-1.5 text-sm rounded-lg border border-brand-ink/10 outline-none"
                   />
                 </div>
               ))}
@@ -441,6 +452,17 @@ export default function BulkAddProductsPage() {
                   className="w-24 px-2 py-1.5 text-sm rounded-lg border border-brand-ink/10 outline-none"
                 />
               </div>
+              <div>
+                <label className="block text-xs text-brand-ink/50 mb-1">Price ₹ (optional)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={manualSizePrice}
+                  onChange={(e) => setManualSizePrice(e.target.value)}
+                  placeholder="default"
+                  className="w-28 px-2 py-1.5 text-sm rounded-lg border border-brand-ink/10 outline-none"
+                />
+              </div>
               <button
                 type="button"
                 onClick={addManualSize}
@@ -457,7 +479,7 @@ export default function BulkAddProductsPage() {
                     key={s.size}
                     className="flex items-center gap-1 text-xs bg-white border border-brand-ink/10 rounded-full px-2 py-1"
                   >
-                    {s.size}: {s.stock}
+                    {s.size}: {s.stock}{Number(s.price) > 0 ? ` · ₹${s.price}` : ''}
                     <button type="button" onClick={() => removeManualSize(s.size)}>
                       <X size={12} />
                     </button>

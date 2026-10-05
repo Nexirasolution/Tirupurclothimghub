@@ -14,6 +14,11 @@ const LINE = '#EEE3DA';
 const PAPER = '#FFFFFF';
 const DISABLED_BG = '#F7F2EC';
 
+function emptySize() {
+  // price '' = "use the variant price"
+  return { size: '', stock: 0, sku: '', price: '' };
+}
+
 function emptyVariant() {
   return {
     color: '',
@@ -21,7 +26,7 @@ function emptyVariant() {
     images: [''],
     price: '',
     compareAtPrice: '',
-    sizes: [{ size: '', stock: 0, sku: '' }],
+    sizes: [emptySize()],
   };
 }
 
@@ -33,6 +38,14 @@ function normalizeSizeChart(value) {
   if (Array.isArray(value)) return value;
   if (value) return [value]; // backward-compat with the old single-string field
   return [];
+}
+
+// Existing products may have sizes with no price (null/undefined) — show them as blank inputs.
+function normalizeVariants(variants) {
+  return (variants || []).map((v) => ({
+    ...v,
+    sizes: (v.sizes || []).map((s) => ({ ...s, price: s.price ?? '' })),
+  }));
 }
 
 // Shared input style
@@ -173,7 +186,7 @@ function AddonOptionsEditor({ title, options, onAdd, onUpdate, onRemove }) {
       </div>
       <p style={{ fontSize: '12px', color: INK_SOFT, fontFamily: 'sans-serif', marginBottom: options.length ? '12px' : 0 }}>
         Leave empty if {title.toLowerCase()} don't apply to this product. The price entered is ADDED
-        on top of the variant price when a customer selects it. Customers can also choose "None".
+        on top of the variant/size price when a customer selects it. Customers can also choose "None".
       </p>
 
       {options.map((opt, idx) => (
@@ -254,6 +267,7 @@ export default function ProductForm({ initial, productId }) {
     };
     return {
       ...base,
+      variants: normalizeVariants(base.variants),
       sizeChart: normalizeSizeChart(base.sizeChart),
       sleeveOptions: base.sleeveOptions || [],
       zipOptions: base.zipOptions || [],
@@ -325,7 +339,7 @@ export default function ProductForm({ initial, productId }) {
   function addSize(vIdx) {
     setForm((f) => {
       const variants = [...f.variants];
-      variants[vIdx] = { ...variants[vIdx], sizes: [...variants[vIdx].sizes, { size: '', stock: 0, sku: '' }] };
+      variants[vIdx] = { ...variants[vIdx], sizes: [...variants[vIdx].sizes, emptySize()] };
       return { ...f, variants };
     });
   }
@@ -420,7 +434,12 @@ export default function ProductForm({ initial, productId }) {
         price: Number(v.price),
         compareAtPrice: Number(v.compareAtPrice) || 0,
         images: v.images.filter(Boolean),
-        sizes: v.sizes.map((s) => ({ ...s, stock: Number(s.stock) })),
+        sizes: v.sizes.map((s) => ({
+          ...s,
+          stock: Number(s.stock),
+          // blank = use the variant price
+          price: s.price === '' || s.price == null ? null : Number(s.price),
+        })),
       })),
     };
     delete payload.sku;
@@ -549,10 +568,7 @@ export default function ProductForm({ initial, productId }) {
             <input ref={sizeChartFileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleSizeChartFilesChange} />
           </div>
 
-          {/* Sleeve/Zip options — product-level, not per-variant. Admin picks
-              which apply to this product; customers choose one of each on
-              the PDP before adding to cart. Leave both unchecked for products
-              where they don't apply (sarees, dupattas, jewellery, etc). */}
+          {/* Sleeve/Zip options — product-level, not per-variant. */}
           <div className="sm:col-span-2 grid sm:grid-cols-2 gap-4">
             <div>
               <label style={labelStyle}>
@@ -686,7 +702,7 @@ export default function ProductForm({ initial, productId }) {
                 onChange={(e) => updateVariant(vIdx, 'colorHex', e.target.value)}
               />
               <input
-                placeholder="Price ₹"
+                placeholder="Default price ₹"
                 type="number"
                 style={inputStyle}
                 value={v.price}
@@ -725,11 +741,14 @@ export default function ProductForm({ initial, productId }) {
               + Add another image
             </button>
 
-            <p style={{ fontSize: '12px', color: INK_SOFT, fontFamily: 'sans-serif', fontWeight: '500', marginBottom: '6px' }}>
-              Sizes &amp; Stock
+            <p style={{ fontSize: '12px', color: INK_SOFT, fontFamily: 'sans-serif', fontWeight: '500', marginBottom: '2px' }}>
+              Sizes, Stock &amp; Price
+            </p>
+            <p style={{ fontSize: '11px', color: INK_SOFT, fontFamily: 'sans-serif', marginBottom: '8px' }}>
+              Leave a size's price blank to use the default price above. Customers see each size's price on the product page.
             </p>
             {v.sizes.map((s, sIdx) => (
-              <div key={sIdx} className="flex gap-2 mb-2 items-center">
+              <div key={sIdx} className="flex flex-wrap gap-2 mb-2 items-center">
                 <input
                   placeholder="Size (e.g. M, 38, Free Size)"
                   style={{ ...inputStyle, width: '140px', marginTop: 0 }}
@@ -748,8 +767,18 @@ export default function ProductForm({ initial, productId }) {
                   onBlur={(e) => (e.target.style.borderColor = LINE)}
                 />
                 <input
+                  type="number"
+                  min="0"
+                  placeholder="Price ₹ (optional)"
+                  style={{ ...inputStyle, width: '140px', marginTop: 0 }}
+                  value={s.price ?? ''}
+                  onChange={(e) => updateSize(vIdx, sIdx, 'price', e.target.value)}
+                  onFocus={(e) => (e.target.style.borderColor = PEACH)}
+                  onBlur={(e) => (e.target.style.borderColor = LINE)}
+                />
+                <input
                   placeholder="SKU (optional)"
-                  style={{ ...inputStyle, flex: 1, marginTop: 0 }}
+                  style={{ ...inputStyle, flex: 1, minWidth: '120px', marginTop: 0 }}
                   value={s.sku}
                   onChange={(e) => updateSize(vIdx, sIdx, 'sku', e.target.value)}
                   onFocus={(e) => (e.target.style.borderColor = PEACH)}

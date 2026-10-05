@@ -107,6 +107,11 @@ export default function ColorSizeSelector({
   const isJewellery = categoryType === 'jewellery';
   const sizeStock = (size) => activeVariant?.sizes?.find((s) => s.size === size)?.stock ?? 0;
 
+  // Per-size pricing: a size may carry its own price, otherwise the variant price applies.
+  const variantPrice = Number(activeVariant?.price) || 0;
+  const priceOfSize = (s) => (Number(s?.price) > 0 ? Number(s.price) : variantPrice);
+  const showSizePrices = !!activeVariant?.sizes?.some((s) => priceOfSize(s) !== variantPrice);
+
   const hasColors = variants?.some((v) => v.color && v.color.trim());
   const hasSizeChart = Array.isArray(sizeChartImages) && sizeChartImages.length > 0;
   const hasSleeveOptions = Array.isArray(sleeveOptions) && sleeveOptions.length > 0;
@@ -182,7 +187,7 @@ export default function ColorSizeSelector({
                 key={s.size}
                 disabled={outOfStock}
                 onClick={() => onSizeChange(s.size)}
-                className="min-w-[40px] h-[36px] px-2.5 text-sm font-medium transition-colors"
+                className={`${showSizePrices ? 'min-w-[64px] h-[48px] px-3 flex flex-col items-center justify-center leading-tight' : 'min-w-[40px] h-[36px] px-2.5'} text-sm font-medium transition-colors`}
                 style={{
                   borderRadius: '4px',
                   border: `1px solid ${outOfStock ? LINE : active ? INK : LINE}`,
@@ -193,6 +198,11 @@ export default function ColorSizeSelector({
                 }}
               >
                 {s.size}
+                {showSizePrices && (
+                  <span className="text-[11px] font-normal" style={{ opacity: 0.75 }}>
+                    {formatINR(priceOfSize(s))}
+                  </span>
+                )}
               </button>
             );
           })}

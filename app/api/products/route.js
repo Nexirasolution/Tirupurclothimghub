@@ -8,6 +8,7 @@ import Category from '@/models/Category';
 import slugify from 'slugify';
 import { requireAdmin } from '@/lib/apiAuth';
 import { generateSku } from '@/lib/sku';
+import { computeBasePrice } from '@/lib/pricing';
 
 // GET /api/products?category=slug&size=M&minPrice=0&maxPrice=2000&sort=newest&page=1&limit=20&flag=bestseller
 // Pass limit=all to skip pagination entirely and return every matching product.
@@ -121,8 +122,9 @@ export const POST = requireAdmin(async (req) => {
     const exists = await Product.exists({ slug });
     if (exists) return NextResponse.json({ error: 'A product with this slug already exists' }, { status: 409 });
 
+    // Lowest of every variant price and every per-size price
     const basePrice = body.variants?.length
-      ? Math.min(...body.variants.map((v) => v.price))
+      ? computeBasePrice(body.variants)
       : body.basePrice || 0;
 
     const product = await Product.create({ ...body, slug, sku, basePrice });

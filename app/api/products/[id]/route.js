@@ -4,6 +4,7 @@ import { dbConnect } from '@/lib/mongodb';
 import Product from '@/models/Product';
 import { requireAdmin } from '@/lib/apiAuth';
 import { getProductPageData, getFilter } from '@/lib/products';
+import { computeBasePrice } from '@/lib/pricing';
 
 export async function GET(req, { params }) {
   const { id } = await params; // works on Next 14 and 15
@@ -30,7 +31,7 @@ export const PUT = requireAdmin(async (req, { params }) => {
   delete body.sku;
 
   if (body.variants?.length) {
-    body.basePrice = Math.min(...body.variants.map((v) => v.price));
+    body.basePrice = computeBasePrice(body.variants);
   }
 
   // Persists whatever is on body (sizeChart / isReadyToShip / sleeveOptions /

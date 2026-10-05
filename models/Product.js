@@ -5,6 +5,7 @@ const VariantSchema = new mongoose.Schema(
     color: { type: String, default: '' },
     colorHex: { type: String, default: '#000000' },
     images: [{ type: String }],
+    // Default price for this colour. Any size without its own price uses this.
     price: { type: Number, required: true },
     compareAtPrice: { type: Number, default: 0 },
 
@@ -12,7 +13,9 @@ const VariantSchema = new mongoose.Schema(
       {
         size: { type: String, required: true },
         stock: { type: Number, default: 0 },
-        sku: { type: String }
+        sku: { type: String },
+        // Optional per-size price. null/0 = use the variant price above.
+        price: { type: Number, default: null, min: 0 }
       }
     ]
   },
@@ -48,18 +51,9 @@ const ProductSchema = new mongoose.Schema(
     // falls back to this product's category.sizeChart instead.
     sizeChart: [{ type: String }],
 
-    // Product-level (not per-variant) sleeve/zip options. Admin picks which
-    // of these apply to this product; if a product has any sleeveOptions,
-    // the customer must pick one on the PDP before adding to cart. Same
-    // for zipOptions. Products where these don't apply (sarees, dupattas,
-    // jewellery, etc) simply leave these empty and no selector is shown.
     sleeveOptions: [{ type: String, enum: ['Full Sleeve', 'Half Sleeve', 'Elbow Sleeve', 'Sleeveless'] }],
     zipOptions: [{ type: String, enum: ['With Zip', 'Without Zip'] }],
 
-    // Optional add-ons — admin can add any number of named pant/shawl
-    // options, each with its own image, extra price, and stock. Customer
-    // picks at most one of each (or none, i.e. "without pant"/"without
-    // shawl"). Empty array = no selector shown on the storefront.
     pantOptions: [AddonOptionSchema],
     shawlOptions: [AddonOptionSchema],
 
@@ -67,7 +61,8 @@ const ProductSchema = new mongoose.Schema(
     // below the product title.
     isReadyToShip: { type: Boolean, default: false },
 
-    basePrice: { type: Number, required: true }, // used for listing/sorting
+    // Lowest price across all variants AND sizes (used for listing/sorting).
+    basePrice: { type: Number, required: true },
     rating: { type: Number, default: 0 },
     reviewCount: { type: Number, default: 0 },
     isBestSeller: { type: Boolean, default: false },
@@ -83,5 +78,8 @@ const ProductSchema = new mongoose.Schema(
 );
 
 ProductSchema.index({ name: 'text', description: 'text', tags: 'text' });
+ProductSchema.index({ isActive: 1, category: 1, createdAt: -1 });
+ProductSchema.index({ isActive: 1, basePrice: 1 });
+ProductSchema.index({ 'variants.sizes.size': 1 });
 
 export default mongoose.models.Product || mongoose.model('Product', ProductSchema);

@@ -48,9 +48,19 @@ export default function ProductClient({ data }) {
   useEffect(() => { setMounted(true); }, []);
 
   const images = activeVariant?.images || [];
-  const discount = activeVariant?.compareAtPrice > activeVariant?.price
-    ? Math.round(((activeVariant.compareAtPrice - activeVariant.price) / activeVariant.compareAtPrice) * 100)
-    : 0;
+  // Per-size pricing: a size may have its own price, otherwise the variant price applies.
+  const variantPrice = activeVariant?.price || 0;
+  const sizeEffectivePrice = (s) => (Number(s?.price) > 0 ? Number(s.price) : variantPrice);
+  const selectedSizeObj = activeVariant?.sizes?.find((s) => s.size === activeSize);
+  const sizePrices = (activeVariant?.sizes || []).map(sizeEffectivePrice);
+  const pricesVary = sizePrices.some((p) => p !== sizePrices[0]);
+  // Before a size is picked, show the lowest price with a "From" label
+  const showFrom = !selectedSizeObj && pricesVary;
+  const currentBasePrice = selectedSizeObj
+    ? sizeEffectivePrice(selectedSizeObj)
+    : pricesVary ? Math.min(...sizePrices) : variantPrice;
+  const compareBase = activeVariant?.compareAtPrice > currentBasePrice ? activeVariant.compareAtPrice : 0;
+  const discount = compareBase ? Math.round(((compareBase - currentBasePrice) / compareBase) * 100) : 0;
 
   // Product's own size chart wins; otherwise fall back to the category's.
   const sizeChartImages = product.sizeChart?.length ? product.sizeChart : (product.category?.sizeChart || []);
@@ -67,10 +77,8 @@ export default function ProductClient({ data }) {
     [product.shawlOptions, activeShawlId]
   );
   const addonTotal = (selectedPant?.price || 0) + (selectedShawl?.price || 0);
-  const unitPrice = (activeVariant?.price || 0) + addonTotal;
-  const unitCompareAtPrice = activeVariant?.compareAtPrice > activeVariant?.price
-    ? activeVariant.compareAtPrice + addonTotal
-    : 0;
+  const unitPrice = currentBasePrice + addonTotal;
+  const unitCompareAtPrice = compareBase ? compareBase + addonTotal : 0;
 
   const computeStock = useCallback(
     (variant, size, pantId, shawlId) =>
@@ -326,6 +334,7 @@ export default function ProductClient({ data }) {
 
             <div className="flex items-baseline gap-3 mt-3 sm:mt-6">
               <span className={`${display.className} text-[22px] sm:text-[26px]`} style={{ color: INK, fontWeight: 500 }}>
+                {showFrom && <span className="text-xs font-normal mr-1.5" style={{ color: INK_SOFT }}>From</span>}
                 {formatINR(unitPrice)}
               </span>
               {unitCompareAtPrice > unitPrice && (
@@ -499,6 +508,7 @@ export default function ProductClient({ data }) {
         >
           <div className="shrink-0">
             <p className="text-base font-medium leading-none" style={{ color: INK }}>
+              {showFrom && <span className="text-[11px] font-normal mr-1" style={{ color: INK_SOFT }}>From</span>}
               {formatINR(unitPrice)}
             </p>
             {unitCompareAtPrice > unitPrice && (
