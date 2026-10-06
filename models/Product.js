@@ -60,6 +60,12 @@ const ProductSchema = new mongoose.Schema(
     // Manual shipping weight of ONE piece, in grams. 0 = not set.
     weight: { type: Number, default: 0, min: 0 },
 
+    // Free shipping for this product (see lib/freeShipping.js).
+    //   freeShipping = true             -> free in every state
+    //   freeShippingStates = ['Kerala'] -> free only when delivering to these states
+    freeShipping: { type: Boolean, default: false },
+    freeShippingStates: [{ type: String }],
+
     // When true, the storefront shows a highlighted "Ready to Ship" badge
     // below the product title.
     isReadyToShip: { type: Boolean, default: false },

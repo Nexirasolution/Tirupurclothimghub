@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { Plus, Trash2, Upload, Loader2, X } from 'lucide-react';
+import { INDIAN_STATES } from '@/lib/indianStates';
 
 // Design tokens — same white/peach minimalist system as the rest of the site.
 const INK = '#241B21';
@@ -262,6 +263,8 @@ export default function ProductForm({ initial, productId }) {
       zipOptions: [],
       pantOptions: [],
       shawlOptions: [],
+      freeShipping: false,
+      freeShippingStates: [],
       isBestSeller: false, isTopSeller: false, isActiveSeller: true, isFeatured: false, isActive: true,
       isReadyToShip: false,
     };
@@ -274,9 +277,15 @@ export default function ProductForm({ initial, productId }) {
       zipOptions: base.zipOptions || [],
       pantOptions: (base.pantOptions || []).map((o) => ({ ...o })),
       shawlOptions: (base.shawlOptions || []).map((o) => ({ ...o })),
+      freeShipping: !!base.freeShipping,
+      freeShippingStates: base.freeShippingStates || [],
     };
   });
   const [saving, setSaving] = useState(false);
+  // 'off' | 'all' (free in every state) | 'states' (free only in the ticked states)
+  const [shipMode, setShipMode] = useState(() =>
+    initial?.freeShipping ? 'all' : initial?.freeShippingStates?.length ? 'states' : 'off'
+  );
   const [sizeChartUploading, setSizeChartUploading] = useState(false);
   const sizeChartFileRef = useRef();
 
@@ -404,6 +413,12 @@ export default function ProductForm({ initial, productId }) {
 
   async function submit(e) {
     e.preventDefault();
+
+    if (shipMode === 'states' && (form.freeShippingStates || []).length === 0) {
+      toast.error('Select at least one state for free shipping, or choose another option');
+      return;
+    }
+
     setSaving(true);
     // Note: sku is intentionally omitted — it's auto-generated/managed server-side
     // based on the product's category (see /api/products and /api/products/[id]).
@@ -413,6 +428,9 @@ export default function ProductForm({ initial, productId }) {
       sizeChart: form.sizeChart || [],
       sleeveOptions: form.sleeveOptions || [],
       zipOptions: form.zipOptions || [],
+      // Free shipping: everywhere, or only in the selected states
+      freeShipping: shipMode === 'all',
+      freeShippingStates: shipMode === 'states' ? (form.freeShippingStates || []) : [],
       pantOptions: (form.pantOptions || [])
         .filter((o) => o.name?.trim())
         .map((o) => ({
@@ -622,6 +640,63 @@ export default function ProductForm({ initial, productId }) {
                 ))}
               </div>
             </div>
+          </div>
+
+          {/* Free shipping: whole product, or only for selected states */}
+          <div className="sm:col-span-2">
+            <label style={labelStyle}>Free Shipping</label>
+            <div className="flex flex-wrap gap-4 mt-2">
+              {[
+                ['off', 'Normal shipping'],
+                ['all', 'Free in all states'],
+                ['states', 'Free only in selected states'],
+              ].map(([val, text]) => (
+                <label key={val} className="flex items-center gap-1.5 text-sm cursor-pointer" style={{ color: INK, fontFamily: 'sans-serif' }}>
+                  <input
+                    type="radio"
+                    name="freeShippingMode"
+                    checked={shipMode === val}
+                    onChange={() => setShipMode(val)}
+                    style={{ accentColor: PEACH, width: '15px', height: '15px' }}
+                  />
+                  {text}
+                </label>
+              ))}
+            </div>
+
+            {shipMode === 'states' && (
+              <div className="mt-3">
+                <div className="flex gap-4 mb-2" style={{ fontSize: '12px', fontFamily: 'sans-serif' }}>
+                  <button type="button" style={{ color: PEACH, fontWeight: 500 }} onClick={() => update('freeShippingStates', [...INDIAN_STATES])}>
+                    Select all
+                  </button>
+                  <button type="button" style={{ color: INK_SOFT, fontWeight: 500 }} onClick={() => update('freeShippingStates', [])}>
+                    Clear
+                  </button>
+                  <span style={{ color: INK_SOFT }}>{(form.freeShippingStates || []).length} selected</span>
+                </div>
+                <div
+                  className="grid sm:grid-cols-3 gap-x-4 gap-y-1.5 p-3 overflow-y-auto"
+                  style={{ border: `1px solid ${LINE}`, borderRadius: '4px', maxHeight: '180px' }}
+                >
+                  {INDIAN_STATES.map((st) => (
+                    <label key={st} className="flex items-center gap-1.5 text-sm cursor-pointer" style={{ color: INK, fontFamily: 'sans-serif' }}>
+                      <input
+                        type="checkbox"
+                        checked={(form.freeShippingStates || []).includes(st)}
+                        onChange={() => toggleArrayValue('freeShippingStates', st)}
+                        style={{ accentColor: PEACH, width: '15px', height: '15px' }}
+                      />
+                      {st}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <p style={{ fontSize: '11px', color: INK_SOFT, fontFamily: 'sans-serif', marginTop: '6px' }}>
+              A free-shipping product adds no weight to the shipping charge. If every item in the cart ships free, shipping is ₹0.
+            </p>
           </div>
 
           {/* Toggles */}

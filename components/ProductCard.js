@@ -22,7 +22,8 @@ function ProductCard({ product, priority = false }) {
   const image = variant?.images?.[0] || '/placeholder.png';
   const price = product.basePrice || variant?.price || 0;
   const compareAt = variant?.compareAtPrice || 0;
-  const discountPct = compareAt > price ? Math.round(((compareAt - price) / compareAt) * 100) : 0;
+  const hasOffer = compareAt > price;
+  const discountPct = hasOffer ? Math.round(((compareAt - price) / compareAt) * 100) : 0;
 
   const totalStock = getVariantTotalStock(variant);
   const outOfStock = totalStock <= 0;
@@ -42,7 +43,25 @@ function ProductCard({ product, priority = false }) {
   );
 
   return (
-    <div style={{ background: PAPER, fontFamily: FONT_SANS }}>
+    <div className="relative" style={{ background: PAPER, fontFamily: FONT_SANS }}>
+      {/* Wishlist button sits outside the Link (valid HTML, better accessibility).
+          No backdrop-filter: expensive to paint across a grid on cheap phones */}
+      <button
+        type="button"
+        onClick={handleWishlistClick}
+        aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+        aria-pressed={wishlisted}
+        className="absolute top-4 right-4 z-10 flex items-center justify-center w-8 h-8 rounded-full transition-transform active:scale-90"
+        style={{ background: 'rgba(255,255,255,0.92)' }}
+      >
+        <Heart
+          className="w-4 h-4"
+          strokeWidth={2}
+          style={{ color: wishlisted ? '#DB2777' : COFFEE }}
+          fill={wishlisted ? '#DB2777' : 'none'}
+        />
+      </button>
+
       <Link href={`/product/${product.slug}`} prefetch={false} className="block">
         <div className="relative aspect-[3/4] overflow-hidden" style={{ background: PEACH_PALE }}>
           <Image
@@ -71,36 +90,45 @@ function ProductCard({ product, priority = false }) {
             ) : null}
           </div>
 
-          {/* No backdrop-filter: expensive to paint across a grid on cheap phones */}
-          <button
-            type="button"
-            onClick={handleWishlistClick}
-            aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
-            aria-pressed={wishlisted}
-            className="absolute top-4 right-4 flex items-center justify-center w-8 h-8 rounded-full transition-transform active:scale-90"
-            style={{ background: 'rgba(255,255,255,0.92)' }}
-          >
-            <Heart
-              className="w-4 h-4"
-              strokeWidth={2}
-              style={{ color: wishlisted ? '#DB2777' : COFFEE }}
-              fill={wishlisted ? '#DB2777' : 'none'}
-            />
-          </button>
-
           <span className="absolute bottom-3.5 right-3.5 flex items-center justify-center w-8 h-8" style={{ color: PAPER }}>
             <MoreVertical className="w-5 h-5" strokeWidth={2} />
           </span>
         </div>
 
-        <div className="pt-4 flex items-baseline gap-3 flex-wrap">
-          <span className="font-bold text-lg sm:text-xl" style={{ color: COFFEE }}>
-            {formatINR(price)}
-          </span>
-          {compareAt > price && (
-            <span className="text-sm sm:text-base line-through font-light" style={{ color: COFFEE_FAINT }}>
-              {formatINR(compareAt)}
+        <div className="pt-3">
+          {/* Name wraps to 2 lines max; fixed min height keeps grid rows aligned */}
+          <h3
+            className="text-sm sm:text-base font-medium leading-snug line-clamp-2 min-h-[2.5rem]"
+            style={{ color: COFFEE }}
+          >
+            {product.name}
+          </h3>
+
+          {/* Price + offer */}
+          <div className="mt-1 flex items-baseline gap-x-3 gap-y-1 flex-wrap">
+            <span className="font-bold text-lg sm:text-xl" style={{ color: COFFEE }}>
+              {formatINR(price)}
             </span>
+
+            {hasOffer && (
+              <>
+                <span className="text-sm sm:text-base line-through font-light" style={{ color: COFFEE_FAINT }}>
+                  {formatINR(compareAt)}
+                </span>
+                <span
+                  className="text-xs font-semibold uppercase tracking-wide px-2 py-0.5 rounded"
+                  style={{ color: COFFEE, background: LIGHT_PEACH }}
+                >
+                  {discountPct}% off
+                </span>
+              </>
+            )}
+          </div>
+
+          {hasOffer && (
+            <p className="mt-1 text-xs" style={{ color: COFFEE_FAINT }}>
+              You save {formatINR(compareAt - price)}
+            </p>
           )}
         </div>
       </Link>

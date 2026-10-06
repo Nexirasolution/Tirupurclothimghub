@@ -18,17 +18,17 @@ export async function generateMetadata() {
   } catch {
     settings = null;
   }
-  const title = settings?.seoTitle || 'SSRK Trending Collections - Women Kurtis, Nighties & More';
+  const title = settings?.seoTitle || 'Tirupur Clothing Hub - Women Kurtis, Nighties & More';
   const description =
     settings?.seoDescription ||
-    'Shop authentic women kurtis, nighties, innerwear and trending collections online from SSRK Trending Collections.';
+    'Shop authentic women kurtis, nighties, innerwear and trending collections online from Tirupur Clothing Hub.';
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://ssrkcollections.com';
   return {
-    title: { default: title, template: '%s | SSRK Trending Collections' },
+    title: { default: title, template: '%s | Tirupur Clothing Hub' },
     description,
     metadataBase: new URL(siteUrl),
-    keywords: ['women kurtis online', 'nighties online', 'innerwear online', 'SSRK trending collections', 'women fashion'],
-    openGraph: { title, description, siteName: 'SSRK Trending Collections', type: 'website' },
+    keywords: ['women kurtis online', 'nighties online', 'innerwear online', 'Tirupur Clothing Hub', 'women fashion'],
+    openGraph: { title, description, siteName: 'Tirupur Clothing Hub', type: 'website' },
     icons: { icon: '/favicon.ico' },
   };
 }

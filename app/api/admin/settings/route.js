@@ -1,3 +1,4 @@
+// app/api/admin/settings/route.js  (FULL FILE)
 export const dynamic = 'force-dynamic';
 
 import { NextResponse } from 'next/server';
@@ -47,9 +48,10 @@ export const PUT = requireAdmin(async (req) => {
 // POST /api/admin/settings — used by checkout to calculate shipping.
 // Body: { subtotal, totalQty, state, items }
 //   subtotal — cart subtotal in ₹ (after discount), for the free-shipping threshold.
-//   totalQty — total physical pieces in the cart (fallback weight).
-//   state    — customer's delivery state, for state-wise rates / blocking.
+//   totalQty — total physical pieces in the cart (used only when `items` is not sent).
+//   state    — customer's delivery state: state-wise rates / blocking / per-product free shipping.
 //   items    — cart lines; weight is computed server-side from product/combo weights.
+//              Products with free shipping (for this state) are left out of the weight.
 export async function POST(req) {
   try {
     const { subtotal, totalQty, state, items } = await req.json();
@@ -61,13 +63,24 @@ export async function POST(req) {
     }
 
     let totalWeightGrams = 0;
+    let shippablePieces = Number(totalQty) || 0;
+    let allItemsFree = false;
+
     if (Array.isArray(items) && items.length) {
-      const result = await computeCartWeight(items, Number(settings.weightPerPiece) || 0);
+      const result = await computeCartWeight(items, Number(settings.weightPerPiece) || 0, state);
       totalWeightGrams = result.totalGrams;
+      shippablePieces = result.totalPieces; // paid pieces only
+      allItemsFree = result.allFree;
     }
 
     return NextResponse.json(
-      calculateShipping(settings, { subtotal, totalQty, totalWeightGrams, state })
+      calculateShipping(settings, {
+        subtotal,
+        totalQty: shippablePieces,
+        totalWeightGrams,
+        state,
+        allItemsFree
+      })
     );
   } catch (err) {
     console.error('Shipping calculate error:', err);

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { X, UploadCloud, Loader2, Plus, Upload } from 'lucide-react';
+import { INDIAN_STATES } from '@/lib/indianStates';
 
 export default function BulkAddProductsPage() {
   const router = useRouter();
@@ -22,6 +23,10 @@ export default function BulkAddProductsPage() {
 
   // Applies to every product created in this batch
   const [isReadyToShip, setIsReadyToShip] = useState(false);
+
+  // Free shipping for every product in this batch: 'off' | 'all' | 'states'
+  const [shipMode, setShipMode] = useState('off');
+  const [freeStates, setFreeStates] = useState([]);
 
   const [sleeveOptions, setSleeveOptions] = useState([]);
   const [zipOptions, setZipOptions] = useState([]);
@@ -71,6 +76,10 @@ export default function BulkAddProductsPage() {
 
   function toggleZipOption(opt) {
     setZipOptions((prev) => (prev.includes(opt) ? prev.filter((o) => o !== opt) : [...prev, opt]));
+  }
+
+  function toggleFreeState(st) {
+    setFreeStates((prev) => (prev.includes(st) ? prev.filter((s) => s !== st) : [...prev, st]));
   }
 
   function handleFilesChange(e) {
@@ -144,6 +153,9 @@ export default function BulkAddProductsPage() {
     if (!skuPrefix.trim()) return toast.error('Enter a SKU code (e.g. MT)');
     if (!price || Number(price) <= 0) return toast.error('Enter a valid price');
     if (files.length === 0) return toast.error('Add at least one image');
+    if (shipMode === 'states' && freeStates.length === 0) {
+      return toast.error('Select at least one state for free shipping, or choose another option');
+    }
 
     // Combine predefined-size stock/price and manually-added sizes
     const fromPredefined = Object.entries(stockBySize)
@@ -192,6 +204,8 @@ export default function BulkAddProductsPage() {
           sizeChart,
           sleeveOptions,
           zipOptions,
+          freeShipping: shipMode === 'all',
+          freeShippingStates: shipMode === 'states' ? freeStates : [],
         }),
       });
 
@@ -393,6 +407,60 @@ export default function BulkAddProductsPage() {
             className="hidden"
             onChange={handleSizeChartFilesChange}
           />
+        </div>
+
+        {/* Free shipping — applies to every product created in this batch */}
+        <div>
+          <label className="block text-sm font-medium mb-2">Free shipping (applied to every product in this batch)</label>
+          <div className="flex flex-wrap gap-4">
+            {[
+              ['off', 'Normal shipping'],
+              ['all', 'Free in all states'],
+              ['states', 'Free only in selected states'],
+            ].map(([val, text]) => (
+              <label key={val} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                <input
+                  type="radio"
+                  name="bulkFreeShippingMode"
+                  checked={shipMode === val}
+                  onChange={() => setShipMode(val)}
+                  className="w-4 h-4"
+                />
+                {text}
+              </label>
+            ))}
+          </div>
+
+          {shipMode === 'states' && (
+            <div className="mt-3">
+              <div className="flex items-center gap-4 mb-2 text-xs">
+                <button type="button" className="underline text-brand-magenta" onClick={() => setFreeStates([...INDIAN_STATES])}>
+                  Select all
+                </button>
+                <button type="button" className="underline text-brand-ink/50" onClick={() => setFreeStates([])}>
+                  Clear
+                </button>
+                <span className="text-brand-ink/40">{freeStates.length} selected</span>
+              </div>
+              <div className="grid sm:grid-cols-3 gap-x-4 gap-y-1.5 p-3 border border-brand-ink/10 rounded-lg max-h-44 overflow-y-auto">
+                {INDIAN_STATES.map((st) => (
+                  <label key={st} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={freeStates.includes(st)}
+                      onChange={() => toggleFreeState(st)}
+                      className="w-4 h-4"
+                    />
+                    {st}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <p className="text-xs text-brand-ink/40 mt-1.5">
+            A free-shipping product adds no weight to the shipping charge. If every item in the cart ships free, shipping is ₹0.
+          </p>
         </div>
 
         {/* Ready to ship — applies to every product created in this batch */}

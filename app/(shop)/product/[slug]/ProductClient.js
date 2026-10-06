@@ -27,6 +27,9 @@ const LINE = '#EEE3DA';
 const PAPER = '#FFFFFF';
 const NEUTRAL = '#C7B9AC';
 
+// Gallery auto-advance interval (ms)
+const AUTOPLAY_MS = 4000;
+
 export default function ProductClient({ data }) {
   const router = useRouter();
   const { addItem } = useCart();
@@ -44,6 +47,7 @@ export default function ProductClient({ data }) {
   const [mounted, setMounted] = useState(false);
   const [lightboxImg, setLightboxImg] = useState(null);
   const [sizeChartOpen, setSizeChartOpen] = useState(false);
+  const [paused, setPaused] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -103,10 +107,30 @@ export default function ProductClient({ data }) {
   const prevImage = () => setActiveImage((i) => (i === 0 ? images.length - 1 : i - 1));
   const nextImage = () => setActiveImage((i) => (i === images.length - 1 ? 0 : i + 1));
 
+  // ── Auto carousel ──
+  // Runs only when there is more than one image. Pauses while the user hovers,
+  // touches, or has a modal open, and is skipped for reduced-motion users.
+  // Depending on activeImage restarts the timer after any manual change.
+  const imageCount = images.length;
+  const modalOpen = !!lightboxImg || sizeChartOpen;
+  useEffect(() => {
+    if (imageCount < 2 || paused || modalOpen) return;
+    if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    const id = setInterval(() => {
+      if (document.hidden) return; // don't spin in background tabs
+      setActiveImage((i) => (i + 1) % imageCount);
+    }, AUTOPLAY_MS);
+    return () => clearInterval(id);
+  }, [imageCount, paused, modalOpen, activeImage]);
+
   // Swipe left/right on the gallery (phones have no hover arrows)
   const touchStartX = useRef(null);
-  const onTouchStart = (e) => { touchStartX.current = e.touches[0].clientX; };
+  const onTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+    setPaused(true);
+  };
   const onTouchEnd = (e) => {
+    setPaused(false);
     if (touchStartX.current == null || images.length < 2) return;
     const dx = e.changedTouches[0].clientX - touchStartX.current;
     touchStartX.current = null;
@@ -209,9 +233,12 @@ export default function ProductClient({ data }) {
               style={{ background: PEACH_WASH }}
               onTouchStart={onTouchStart}
               onTouchEnd={onTouchEnd}
+              onMouseEnter={() => setPaused(true)}
+              onMouseLeave={() => setPaused(false)}
             >
               {images[activeImage] && (
                 <Image
+                  key={images[activeImage]}
                   src={images[activeImage]}
                   alt={product.name}
                   fill
@@ -245,37 +272,52 @@ export default function ProductClient({ data }) {
 
               {images.length > 1 && (
                 <>
+                  {/* Prev / next: always visible round buttons, turn peach on hover/press */}
                   <button
                     onClick={prevImage}
-                    className="absolute left-0 top-0 bottom-0 w-1/4 flex items-center justify-start pl-2 opacity-0 hover:opacity-100 transition-opacity"
+                    className="group absolute left-2.5 top-1/2 -translate-y-1/2 z-10 w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full shadow-md transition active:scale-90 hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                    style={{ background: 'rgba(255,255,255,0.95)', outlineColor: PEACH }}
                     aria-label="Previous image"
                   >
-                    <ChevronLeft size={18} strokeWidth={1.5} style={{ color: INK }} />
+                    <ChevronLeft size={20} strokeWidth={2} className="transition-colors group-hover:text-[#D9946A] group-active:text-[#D9946A]" style={{ color: INK }} />
                   </button>
                   <button
                     onClick={nextImage}
-                    className="absolute right-0 top-0 bottom-0 w-1/4 flex items-center justify-end pr-2 opacity-0 hover:opacity-100 transition-opacity"
+                    className="group absolute right-2.5 top-1/2 -translate-y-1/2 z-10 w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center rounded-full shadow-md transition active:scale-90 hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                    style={{ background: 'rgba(255,255,255,0.95)', outlineColor: PEACH }}
                     aria-label="Next image"
                   >
-                    <ChevronRight size={18} strokeWidth={1.5} style={{ color: INK }} />
+                    <ChevronRight size={20} strokeWidth={2} className="transition-colors group-hover:text-[#D9946A] group-active:text-[#D9946A]" style={{ color: INK }} />
                   </button>
-                  <div className="hidden sm:block absolute bottom-3 right-3 text-[11px] font-medium tracking-wide" style={{ color: INK }}>
+
+                  <div
+                    className="hidden sm:block absolute bottom-3 right-3 px-2 py-0.5 rounded-full text-[11px] font-medium tracking-wide"
+                    style={{ color: INK, background: 'rgba(255,255,255,0.85)' }}
+                  >
                     {String(activeImage + 1).padStart(2, '0')} / {String(images.length).padStart(2, '0')}
                   </div>
 
-                  {/* Mobile dots */}
-                  <div className="sm:hidden absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 pointer-events-none">
+                  {/* Dots: tappable, active one is a long peach pill */}
+                  <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 z-10">
                     {images.map((_, i) => (
-                      <span
+                      <button
                         key={i}
-                        className="block rounded-full"
-                        style={{
-                          width: i === activeImage ? 16 : 6,
-                          height: 6,
-                          background: i === activeImage ? PAPER : 'rgba(255,255,255,0.6)',
-                          transition: 'width .2s',
-                        }}
-                      />
+                        onClick={() => setActiveImage(i)}
+                        aria-label={`Go to image ${i + 1}`}
+                        aria-current={i === activeImage}
+                        className="py-2 px-0.5"
+                      >
+                        <span
+                          className="block rounded-full"
+                          style={{
+                            width: i === activeImage ? 20 : 7,
+                            height: 7,
+                            background: i === activeImage ? PEACH : 'rgba(255,255,255,0.85)',
+                            boxShadow: '0 0 0 1px rgba(36,27,33,0.15)',
+                            transition: 'width .25s, background .25s',
+                          }}
+                        />
+                      </button>
                     ))}
                   </div>
                 </>
@@ -288,11 +330,13 @@ export default function ProductClient({ data }) {
                   <button
                     key={i}
                     onClick={() => setActiveImage(i)}
-                    className="relative w-12 h-[60px] overflow-hidden shrink-0 transition-opacity"
+                    aria-label={`Show image ${i + 1}`}
+                    aria-current={i === activeImage}
+                    className="relative w-12 h-[60px] overflow-hidden shrink-0 transition-all hover:opacity-100"
                     style={{
-                      opacity: i === activeImage ? 1 : 0.45,
+                      opacity: i === activeImage ? 1 : 0.5,
                       borderRadius: '3px',
-                      boxShadow: i === activeImage ? `inset 0 -2px 0 ${PEACH}` : 'none',
+                      boxShadow: i === activeImage ? `0 0 0 2px ${PEACH}` : 'none',
                     }}
                   >
                     <Image src={img} alt="" fill sizes="48px" quality={50} className="object-cover" />

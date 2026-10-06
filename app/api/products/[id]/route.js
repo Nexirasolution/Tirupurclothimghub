@@ -5,6 +5,7 @@ import Product from '@/models/Product';
 import { requireAdmin } from '@/lib/apiAuth';
 import { getProductPageData, getFilter } from '@/lib/products';
 import { computeBasePrice } from '@/lib/pricing';
+import { sanitizeFreeShipping } from '@/lib/freeShipping';
 
 // Admin read (?admin=1): always fresh, includes inactive products, and the
 // category stays a plain id so the edit form can post it back safely.
@@ -48,12 +49,16 @@ export const PUT = requireAdmin(async (req, { params }) => {
   // Weight is entered manually in grams; never allow negatives (updates skip schema validators)
   if ('weight' in body) body.weight = Math.max(0, Number(body.weight) || 0);
 
+  // Clean freeShipping / freeShippingStates (updates skip schema validators)
+  sanitizeFreeShipping(body);
+
   if (body.variants?.length) {
     body.basePrice = computeBasePrice(body.variants);
   }
 
   // Persists whatever is on body (sizeChart / isReadyToShip / sleeveOptions /
-  // zipOptions / pantOptions / shawlOptions) as long as the schema defines them.
+  // zipOptions / pantOptions / shawlOptions / freeShipping / freeShippingStates)
+  // as long as the schema defines them.
   const product = await Product.findOneAndUpdate(getFilter(id), body, { new: true });
   if (!product) return NextResponse.json({ error: 'Product not found' }, { status: 404 });
 

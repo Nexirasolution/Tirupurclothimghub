@@ -35,7 +35,7 @@ async function getAllProducts(sort) {
 }
 
 export const metadata = {
-  title: 'All Products | Mohith Trends',
+  title: 'All Products | Tirupur Clothing Hub',
 };
 
 export default async function ProductsPage({ searchParams }) {

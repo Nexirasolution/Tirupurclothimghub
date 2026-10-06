@@ -6,6 +6,7 @@ import Category from '@/models/Category';
 import slugify from 'slugify';
 import { requireAdmin } from '@/lib/apiAuth';
 import { computeBasePrice } from '@/lib/pricing';
+import { sanitizeFreeShipping } from '@/lib/freeShipping';
 
 // POST /api/products/bulk
 // body: {
@@ -14,13 +15,15 @@ import { computeBasePrice } from '@/lib/pricing';
 //   images: [url, url, ...], tags,
 //   isReadyToShip, sizeChart: [url, url, ...],
 //   sleeveOptions: [ 'Full Sleeve' | 'Half Sleeve' | 'Elbow Sleeve' | 'Sleeveless', ... ],
-//   zipOptions: [ 'With Zip' | 'Without Zip', ... ]
+//   zipOptions: [ 'With Zip' | 'Without Zip', ... ],
+//   freeShipping: boolean,            // free in every state
+//   freeShippingStates: [ 'Kerala' ]  // free only in these states
 // }
 // Creates ONE product per image.
 // - Title = auto-derived from the CATEGORY name + zero-padded number.
 // - SKU = admin-typed short code + zero-padded number.
 // - Each size may carry its own optional `price`; blank/0 => the default `price` is used.
-// - isReadyToShip / sizeChart / sleeveOptions / zipOptions apply to every product in the batch.
+// - isReadyToShip / sizeChart / sleeveOptions / zipOptions / free shipping apply to every product in the batch.
 export const POST = requireAdmin(async (req) => {
   try {
     await dbConnect();
@@ -42,6 +45,12 @@ export const POST = requireAdmin(async (req) => {
       sleeveOptions = [],
       zipOptions = [],
     } = body;
+
+    // Clean free-shipping fields (same rules as single-product create/update)
+    const { freeShipping, freeShippingStates } = sanitizeFreeShipping({
+      freeShipping: body.freeShipping,
+      freeShippingStates: body.freeShippingStates || [],
+    });
 
     if (!category) {
       return NextResponse.json({ error: 'Category is required' }, { status: 400 });
@@ -177,6 +186,8 @@ export const POST = requireAdmin(async (req) => {
           sizeChart: sizeChartImages,
           sleeveOptions: sleeveOptionsClean,
           zipOptions: zipOptionsClean,
+          freeShipping: !!freeShipping,
+          freeShippingStates: freeShipping ? [] : (freeShippingStates || []),
         });
 
         created.push({ id: product._id, name: product.name, sku: product.sku });
