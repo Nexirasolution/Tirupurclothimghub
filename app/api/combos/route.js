@@ -5,6 +5,7 @@ import { dbConnect } from '@/lib/mongodb';
 import Combo from '@/models/Combo';
 import slugify from 'slugify';
 import { requireAdmin } from '@/lib/apiAuth';
+import { sanitizeFreeShipping } from '@/lib/freeShipping';
 
 export async function GET(req) {
   await dbConnect();
@@ -47,6 +48,7 @@ export const POST = requireAdmin(async (req) => {
     // Manual weights (grams), never negative
     const weight = Math.max(0, Number(body.weight) || 0);
     const pieceWeight = Math.max(0, Number(body.pieceWeight) || 0);
+    sanitizeFreeShipping(body);
     const combo = await Combo.create({ ...body, slug, weight, pieceWeight });
     return NextResponse.json({ combo }, { status: 201 });
   } catch (err) {

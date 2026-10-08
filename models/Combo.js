@@ -60,6 +60,12 @@ const ComboSchema = new mongoose.Schema(
     // If 0, the base product's own weight is used.
     pieceWeight: { type: Number, default: 0, min: 0 },
 
+    // Per-combo free shipping (same semantics as Product)
+    //   freeShipping === true           -> free in every state
+    //   freeShippingStates = ['Kerala'] -> free only to those states
+    freeShipping: { type: Boolean, default: false },
+    freeShippingStates: [{ type: String }],
+
     baseProduct: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
     colors: [ColorOptionSchema],
     packOptions: [PackOptionSchema],

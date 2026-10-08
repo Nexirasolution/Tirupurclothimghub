@@ -2,11 +2,28 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatINR } from '@/lib/utils';
 import { buildProductIndex, resolveOrderItem } from '@/lib/orderItemResolver';
 import OrderItemModal from '@/components/admin/OrderItemModal';
 
 const STATUSES = ['placed', 'confirmed', 'packed', 'shipped', 'delivered', 'cancelled', 'returned'];
+const PAGE_SIZES = [10, 25, 50, 100];
+
+// Builds [1, '…', 4, 5, 6, '…', 20] style page lists
+function pageList(current, total) {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const pages = new Set([1, total, current - 1, current, current + 1]);
+  if (current <= 3) { pages.add(2); pages.add(3); pages.add(4); }
+  if (current >= total - 2) { pages.add(total - 1); pages.add(total - 2); pages.add(total - 3); }
+  const sorted = [...pages].filter((p) => p >= 1 && p <= total).sort((a, b) => a - b);
+  const out = [];
+  sorted.forEach((p, i) => {
+    if (i > 0 && p - sorted[i - 1] > 1) out.push('…');
+    out.push(p);
+  });
+  return out;
+}
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState([]);
@@ -17,6 +34,8 @@ export default function AdminOrdersPage() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [modalItem, setModalItem] = useState(null); // { item, image, categoryName, productSku }
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   async function load() {
     setLoading(true);
@@ -31,6 +50,7 @@ export default function AdminOrdersPage() {
       }
       const data = await res.json();
       setOrders(data.orders || []);
+      setPage(1);
     } catch (err) {
       console.error(err);
       setOrders([]);
@@ -83,7 +103,24 @@ export default function AdminOrdersPage() {
       }
       return false;
     });
-  }, [enrichedOrders, categoryFilter]);
+  }, [enrichedOrders, categoryFilter, categories]);
+
+  // ── Pagination (applied after the category filter) ──
+  const totalOrders = filteredOrders.length;
+  const totalPages = Math.max(1, Math.ceil(totalOrders / pageSize));
+  const currentPage = Math.min(page, totalPages); // clamp if data shrinks
+  const startIdx = (currentPage - 1) * pageSize;
+  const pagedOrders = useMemo(
+    () => filteredOrders.slice(startIdx, startIdx + pageSize),
+    [filteredOrders, startIdx, pageSize]
+  );
+  const showingFrom = totalOrders === 0 ? 0 : startIdx + 1;
+  const showingTo = Math.min(startIdx + pageSize, totalOrders);
+
+  function goTo(p) {
+    setPage(Math.min(Math.max(1, p), totalPages));
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 
   function categoryName(catRef) {
     const cid = catId(catRef);
@@ -108,7 +145,7 @@ export default function AdminOrdersPage() {
         </select>
         <select
           value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
+          onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }}
           className="border rounded-lg px-3 py-2 text-sm"
         >
           <option value="all">All Categories</option>
@@ -146,7 +183,7 @@ export default function AdminOrdersPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredOrders.map((o) => (
+              {pagedOrders.map((o) => (
                 <tr key={o._id} className="border-b border-brand-ink/5">
                   <td className="p-3 font-medium">{o.orderNumber}</td>
                   <td className="p-3">{o.customer?.name}<br /><span className="text-xs text-brand-ink/50">{o.customer?.phone}</span></td>
@@ -185,7 +222,63 @@ export default function AdminOrdersPage() {
               ))}
             </tbody>
           </table>
-          {filteredOrders.length === 0 && <p className="text-center text-brand-ink/40 py-10">No orders found.</p>}
+          {totalOrders === 0 && <p className="text-center text-brand-ink/40 py-10">No orders found.</p>}
+
+          {totalOrders > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-3 p-3 border-t border-brand-ink/10 text-sm">
+              <div className="flex items-center gap-3 text-brand-ink/60">
+                <span>
+                  Showing <b>{showingFrom}</b>–<b>{showingTo}</b> of <b>{totalOrders}</b>
+                </span>
+                <label className="flex items-center gap-1.5 text-xs">
+                  Rows
+                  <select
+                    value={pageSize}
+                    onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+                    className="border rounded-md px-2 py-1 text-xs"
+                  >
+                    {PAGE_SIZES.map((n) => <option key={n} value={n}>{n}</option>)}
+                  </select>
+                </label>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => goTo(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  className="p-1.5 rounded-md border disabled:opacity-40 disabled:cursor-not-allowed hover:border-brand-magenta"
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                {pageList(currentPage, totalPages).map((p, i) =>
+                  p === '…' ? (
+                    <span key={`dots-${i}`} className="px-1.5 text-brand-ink/40">…</span>
+                  ) : (
+                    <button
+                      key={p}
+                      onClick={() => goTo(p)}
+                      className={`min-w-[32px] px-2 py-1 rounded-md border text-xs ${
+                        p === currentPage
+                          ? 'bg-brand-magenta text-white border-brand-magenta'
+                          : 'hover:border-brand-magenta'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  )
+                )}
+                <button
+                  onClick={() => goTo(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                  className="p-1.5 rounded-md border disabled:opacity-40 disabled:cursor-not-allowed hover:border-brand-magenta"
+                  aria-label="Next page"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

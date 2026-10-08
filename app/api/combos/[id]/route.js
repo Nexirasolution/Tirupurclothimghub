@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { dbConnect } from '@/lib/mongodb';
 import Combo from '@/models/Combo';
 import { requireAdmin } from '@/lib/apiAuth';
+import { sanitizeFreeShipping } from '@/lib/freeShipping';
 
 export const PUT = requireAdmin(async (req, { params }) => {
   const { id } = await params; // works on Next 14 and 15
@@ -30,6 +31,7 @@ export const PUT = requireAdmin(async (req, { params }) => {
   // Manual weights (grams), never negative
   body.weight = Math.max(0, Number(body.weight) || 0);
   body.pieceWeight = Math.max(0, Number(body.pieceWeight) || 0);
+  sanitizeFreeShipping(body);
 
   try {
     const combo = await Combo.findByIdAndUpdate(id, body, {

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Plus, Trash2, X, Upload, Loader2, Pencil } from 'lucide-react';
 import ColorPackFields from '@/components/admin/ColorPackFields';
+import { INDIAN_STATES } from '@/lib/indianStates';
 
 const emptyForm = {
   type: 'multi-product',
@@ -11,6 +12,8 @@ const emptyForm = {
   comboPrice: '', originalPrice: '', piecesPerCombo: '', productIds: [],
   weight: '',       // grams — total weight of ONE multi-product combo
   pieceWeight: '',  // grams — weight of ONE piece in a color pack
+  freeShipping: false,      // free shipping in every state
+  freeShippingStates: [],   // free shipping only to these states
   baseProduct: '', colors: [], packOptions: [], sizeChart: [],
 };
 
@@ -43,6 +46,15 @@ export default function AdminCombosPage() {
     }));
   }
 
+  function toggleFreeState(state) {
+    setForm((f) => ({
+      ...f,
+      freeShippingStates: f.freeShippingStates.includes(state)
+        ? f.freeShippingStates.filter((s) => s !== state)
+        : [...f.freeShippingStates, state],
+    }));
+  }
+
   function closeForm() {
     setShowForm(false);
     setForm(emptyForm);
@@ -67,6 +79,8 @@ export default function AdminCombosPage() {
       productIds: (combo.products || []).map((p) => (typeof p.product === 'object' ? p.product?._id : p.product) || p._id || p),
       weight: combo.weight > 0 ? combo.weight : '',
       pieceWeight: combo.pieceWeight > 0 ? combo.pieceWeight : '',
+      freeShipping: combo.freeShipping === true,
+      freeShippingStates: combo.freeShippingStates || [],
       baseProduct: (typeof combo.baseProduct === 'object' ? combo.baseProduct?._id : combo.baseProduct) || '',
       colors: combo.colors || [],
       packOptions: combo.packOptions || [],
@@ -108,6 +122,12 @@ export default function AdminCombosPage() {
     e.preventDefault();
     const isColorPack = form.type === 'color-pack';
 
+    // Shared by both combo types. "All states" wins over the per-state list.
+    const shippingPayload = {
+      freeShipping: form.freeShipping === true,
+      freeShippingStates: form.freeShipping ? [] : form.freeShippingStates,
+    };
+
     const payload = isColorPack
       ? {
           type: 'color-pack',
@@ -120,6 +140,7 @@ export default function AdminCombosPage() {
           sizeChart: form.sizeChart,
           // grams per piece; blank = use the base product's weight
           pieceWeight: Math.max(0, Number(form.pieceWeight) || 0),
+          ...shippingPayload,
         }
       : {
           type: 'multi-product',
@@ -133,6 +154,7 @@ export default function AdminCombosPage() {
           sizeChart: form.sizeChart,
           // grams for ONE combo; blank = sum of the products' own weights
           weight: Math.max(0, Number(form.weight) || 0),
+          ...shippingPayload,
         };
 
     const isEditing = Boolean(editingId);
@@ -292,6 +314,53 @@ export default function AdminCombosPage() {
             </>
           )}
 
+          {/* Free shipping (both combo types) */}
+          <div className="border rounded-lg p-3 space-y-2">
+            <p className="text-sm font-medium">Shipping</p>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={form.freeShipping}
+                onChange={(e) => setForm({ ...form, freeShipping: e.target.checked })}
+              />
+              Free shipping in all states
+            </label>
+
+            {!form.freeShipping && (
+              <>
+                <p className="text-xs text-neutral-500">
+                  Or make shipping free only for selected states
+                  {form.freeShippingStates.length > 0 && ` (${form.freeShippingStates.length} selected)`}:
+                </p>
+                <div className="max-h-40 overflow-y-auto border rounded-lg p-2 grid grid-cols-2 sm:grid-cols-3 gap-1">
+                  {INDIAN_STATES.map((s) => (
+                    <label key={s} className="flex items-center gap-2 text-xs">
+                      <input
+                        type="checkbox"
+                        checked={form.freeShippingStates.includes(s)}
+                        onChange={() => toggleFreeState(s)}
+                      />
+                      {s}
+                    </label>
+                  ))}
+                </div>
+                {form.freeShippingStates.length > 0 && (
+                  <button
+                    type="button"
+                    className="text-xs underline text-brand-magenta"
+                    onClick={() => setForm({ ...form, freeShippingStates: [] })}
+                  >
+                    Clear states
+                  </button>
+                )}
+              </>
+            )}
+            <p className="text-[10px] text-neutral-400">
+              Free-shipping combos are left out of the shipping weight. If every item in the cart is free for the
+              customer's state, shipping is ₹0.
+            </p>
+          </div>
+
           <button className="btn-primary text-sm" disabled={uploading}>
             {uploading ? 'Uploading…' : editingId ? 'Save Changes' : 'Create'}
           </button>
@@ -324,6 +393,11 @@ export default function AdminCombosPage() {
                   )}
                   {weightLabel && (
                     <span className="text-[10px] bg-neutral-100 text-neutral-600 px-1.5 py-0.5 rounded-full">{weightLabel}</span>
+                  )}
+                  {(c.freeShipping || c.freeShippingStates?.length > 0) && (
+                    <span className="text-[10px] bg-green-50 text-green-700 px-1.5 py-0.5 rounded-full">
+                      {c.freeShipping ? 'Free ship' : `Free ship: ${c.freeShippingStates.length} state(s)`}
+                    </span>
                   )}
                 </div>
                 <p className="text-brand-magenta font-semibold text-sm">{priceLabel}</p>
