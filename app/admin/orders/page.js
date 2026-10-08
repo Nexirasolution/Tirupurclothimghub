@@ -10,6 +10,34 @@ import OrderItemModal from '@/components/admin/OrderItemModal';
 const STATUSES = ['placed', 'confirmed', 'packed', 'shipped', 'delivered', 'cancelled', 'returned'];
 const PAGE_SIZES = [10, 25, 50, 100];
 
+// Local-time YYYY-MM-DD, the format <input type="date"> uses
+function toInputDate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function daysAgo(n) {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return toInputDate(d);
+}
+
+const DATE_PRESETS = [
+  { label: 'Today', range: () => [toInputDate(new Date()), toInputDate(new Date())] },
+  { label: 'Yesterday', range: () => [daysAgo(1), daysAgo(1)] },
+  { label: 'Last 7 days', range: () => [daysAgo(6), toInputDate(new Date())] },
+  { label: 'Last 30 days', range: () => [daysAgo(29), toInputDate(new Date())] },
+  {
+    label: 'This month',
+    range: () => {
+      const now = new Date();
+      return [toInputDate(new Date(now.getFullYear(), now.getMonth(), 1)), toInputDate(now)];
+    },
+  },
+];
+
 // Builds [1, '…', 4, 5, 6, '…', 20] style page lists
 function pageList(current, total) {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
@@ -36,6 +64,14 @@ export default function AdminOrdersPage() {
   const [modalItem, setModalItem] = useState(null); // { item, image, categoryName, productSku }
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const [dateFrom, setDateFrom] = useState(''); // YYYY-MM-DD (inclusive)
+  const [dateTo, setDateTo] = useState('');     // YYYY-MM-DD (inclusive)
+
+  function setRange(from, to) {
+    setDateFrom(from);
+    setDateTo(to);
+    setPage(1);
+  }
 
   async function load() {
     setLoading(true);
@@ -96,14 +132,25 @@ export default function AdminOrdersPage() {
   }, [orders, index]);
 
   const filteredOrders = useMemo(() => {
-    if (categoryFilter === 'all') return enrichedOrders;
+    // Date range is inclusive of both days, in the admin's local time
+    const fromTs = dateFrom ? new Date(`${dateFrom}T00:00:00`).getTime() : null;
+    const toTs = dateTo ? new Date(`${dateTo}T23:59:59.999`).getTime() : null;
+
     return enrichedOrders.filter((o) => {
+      if (fromTs !== null || toTs !== null) {
+        const ts = new Date(o.createdAt).getTime();
+        if (Number.isNaN(ts)) return false;
+        if (fromTs !== null && ts < fromTs) return false;
+        if (toTs !== null && ts > toTs) return false;
+      }
+
+      if (categoryFilter === 'all') return true;
       for (const cid of o.categoryIds) {
         if (cid === categoryFilter || parentId(cid) === categoryFilter) return true;
       }
       return false;
     });
-  }, [enrichedOrders, categoryFilter, categories]);
+  }, [enrichedOrders, categoryFilter, categories, dateFrom, dateTo]);
 
   // ── Pagination (applied after the category filter) ──
   const totalOrders = filteredOrders.length;
@@ -161,6 +208,59 @@ export default function AdminOrdersPage() {
           ))}
         </select>
         <button onClick={load} className="btn-outline text-sm">Search</button>
+      </div>
+
+      {/* Date filter */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <label className="flex items-center gap-1.5 text-xs text-brand-ink/60">
+          From
+          <input
+            type="date"
+            value={dateFrom}
+            max={dateTo || undefined}
+            onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+            className="border rounded-lg px-2.5 py-1.5 text-sm text-brand-ink"
+          />
+        </label>
+        <label className="flex items-center gap-1.5 text-xs text-brand-ink/60">
+          To
+          <input
+            type="date"
+            value={dateTo}
+            min={dateFrom || undefined}
+            onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+            className="border rounded-lg px-2.5 py-1.5 text-sm text-brand-ink"
+          />
+        </label>
+        <div className="flex flex-wrap gap-1.5">
+          {DATE_PRESETS.map((p) => {
+            const [f, t] = p.range();
+            const active = dateFrom === f && dateTo === t;
+            return (
+              <button
+                key={p.label}
+                type="button"
+                onClick={() => setRange(f, t)}
+                className={`text-xs px-2.5 py-1.5 rounded-full border transition-colors ${
+                  active
+                    ? 'bg-brand-magenta text-white border-brand-magenta'
+                    : 'text-brand-ink/70 hover:border-brand-magenta'
+                }`}
+              >
+                {p.label}
+              </button>
+            );
+          })}
+          {(dateFrom || dateTo) && (
+            <button
+              type="button"
+              onClick={() => setRange('', '')}
+              className="text-xs px-2.5 py-1.5 underline text-brand-magenta"
+            >
+              Clear dates
+            </button>
+          )}
+        </div>
       </div>
 
       {loading ? (
