@@ -1,11 +1,37 @@
+const r2Host = process.env.R2_PUBLIC_URL ? new URL(process.env.R2_PUBLIC_URL).hostname : null;
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    remotePatterns: [
-      { protocol: 'https', hostname: '**' },
-      { protocol: 'http', hostname: '**' }
-    ]
+    // Only allow images from your Cloudflare R2 public URL (read from the env var).
+    // R2_PUBLIC_URL must be set in Vercel for the build, e.g. https://pub-xxxx.r2.dev
+    remotePatterns: r2Host ? [{ protocol: 'https', hostname: r2Host }] : [],
+
+    // WebP only: AVIF is much more CPU-heavy to encode
+    formats: ['image/webp'],
+
+    // Fewer sizes = fewer generated variants = fewer transformations
+    deviceSizes: [640, 828, 1200],
+    imageSizes: [64, 128, 256],
+
+    // Qualities used in the code: 75 (main images) and 50 (thumbnails)
+    qualities: [50, 75],
+
+    // Cache optimized images for 1 year (default is 60s)
+    minimumCacheTTL: 31536000,
   },
-  eslint: { ignoreDuringBuilds: true }
+
+  eslint: { ignoreDuringBuilds: true },
+
+  // Cache static files in /public aggressively
+  async headers() {
+    return [
+      {
+        source: '/:all*(svg|jpg|jpeg|png|webp|gif|ico|woff2)',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+      },
+    ];
+  },
 };
+
 module.exports = nextConfig;

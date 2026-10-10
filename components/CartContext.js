@@ -1,13 +1,13 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { totalPiecesOf } from '@/lib/comboPieces';
 
 const CartContext = createContext(null);
 const STORAGE_KEY = 'lb_cart_v1';
 
-// ── Brand tokens — peach / coffee minimalist theme ──────────
+// ── Brand tokens: peach / coffee minimalist theme ──────────
 const PEACH       = '#D9946A';
 const PEACH_LIGHT = '#F7EDE4';
 const SAGE        = '#7C9473';
@@ -31,17 +31,19 @@ const toastBase = {
 
 function brandToast(message, opts = {}) {
   return toast(
-    (t) => (
+    () => (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
         <span>{message}</span>
         <span style={{ fontSize: 9, color: PEACH, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase' }}>
-         Tirupur Clothing Hub
+          Tirupur Clothing Hub
         </span>
       </div>
     ),
     { ...toastBase, ...opts }
   );
 }
+
+const warnStyle = { ...toastBase.style, borderLeftColor: PEACH_LIGHT };
 
 // A cart/order line is unique per product+variant+size AND per sleeve/zip/
 // pant/shawl selection, and for color-pack combos per pack size + color
@@ -59,66 +61,77 @@ function sameLine(a, b) {
     (a.shawlOption?.id || '') === (b.shawlOption?.id || '')
   );
 }
+
+// Pure helper: merges one item into a list and reports what happened.
+// status: 'added' | 'clamped' (added, but limited by stock) | 'blocked' (not added)
+function mergeLine(list, item) {
+  const idx = list.findIndex((i) => sameLine(i, item));
+  const stockLimit = typeof item.stock === 'number' ? item.stock : Infinity;
+
+  if (idx > -1) {
+    const currentQty = list[idx].qty;
+    if (currentQty >= stockLimit) return { list, status: 'blocked' };
+
+    const desiredQty = currentQty + item.qty;
+    const finalQty = Math.min(desiredQty, stockLimit);
+    const copy = [...list];
+    copy[idx] = {
+      ...copy[idx],
+      qty: finalQty,
+      stock: stockLimit,
+      pieces: item.pieces ?? copy[idx].pieces,
+    };
+    return { list: copy, status: finalQty < desiredQty ? 'clamped' : 'added' };
+  }
+
+  if (stockLimit <= 0) return { list, status: 'blocked' };
+
+  const finalQty = Math.min(item.qty, stockLimit);
+  return {
+    list: [...list, { ...item, qty: finalQty }],
+    status: finalQty < item.qty ? 'clamped' : 'added',
+  };
+}
 // ───────────────────────────────────────────────────────────────
 
 export function CartProvider({ children }) {
   const [items, setItems] = useState([]);
   const [loaded, setLoaded] = useState(false);
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setItems(JSON.parse(raw));
-    } catch {}
-    setLoaded(true);
+  // Always holds the latest cart so actions can compute the result and show
+  // the right toast synchronously (no side effects inside state updaters,
+  // which React may run late or twice).
+  const itemsRef = useRef([]);
+
+  const commit = useCallback((next) => {
+    itemsRef.current = next;
+    setItems(next);
   }, []);
 
   useEffect(() => {
-    if (loaded) localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) commit(parsed);
+      }
+    } catch {}
+    setLoaded(true);
+  }, [commit]);
+
+  useEffect(() => {
+    if (!loaded) return;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    } catch {
+      // storage full or blocked (e.g. private mode): keep working in memory
+    }
   }, [items, loaded]);
 
   const addItem = useCallback((item) => {
-    let blocked = false;
-    let clamped = false;
+    const { list, status } = mergeLine(itemsRef.current, item);
 
-    setItems((prev) => {
-      const idx = prev.findIndex((i) => sameLine(i, item));
-
-      const stockLimit = typeof item.stock === 'number' ? item.stock : Infinity;
-
-      if (idx > -1) {
-        const currentQty = prev[idx].qty;
-
-        if (currentQty >= stockLimit) {
-          blocked = true;
-          return prev;
-        }
-
-        const desiredQty = currentQty + item.qty;
-        const finalQty = Math.min(desiredQty, stockLimit);
-        if (finalQty < desiredQty) clamped = true;
-
-        const copy = [...prev];
-        copy[idx] = {
-          ...copy[idx],
-          qty: finalQty,
-          stock: stockLimit,
-          pieces: item.pieces ?? copy[idx].pieces,
-        };
-        return copy;
-      }
-
-      if (stockLimit <= 0) {
-        blocked = true;
-        return prev;
-      }
-
-      const finalQty = Math.min(item.qty, stockLimit);
-      if (finalQty < item.qty) clamped = true;
-      return [...prev, { ...item, qty: finalQty }];
-    });
-
-    if (blocked) {
+    if (status === 'blocked') {
       brandToast('Sorry, this item is out of stock', {
         icon: '⚠️',
         style: { ...toastBase.style, borderLeftColor: RUST },
@@ -126,65 +139,34 @@ export function CartProvider({ children }) {
       return;
     }
 
-    if (clamped) {
-      brandToast('Only limited stock available — quantity adjusted', {
-        icon: '⚠️',
-        style: { ...toastBase.style, borderLeftColor: PEACH_LIGHT },
-      });
+    commit(list);
+
+    if (status === 'clamped') {
+      brandToast('Only limited stock available. Quantity adjusted', { icon: '⚠️', style: warnStyle });
       return;
     }
 
-    brandToast('Added to cart', {
-      icon: '✓',
-      style: { ...toastBase.style, borderLeftColor: PEACH },
-    });
-  }, []);
+    brandToast('Added to cart', { icon: '✓' });
+  }, [commit]);
 
   // Adds several lines at once as a single state update, with one summary toast.
   const addItems = useCallback((newItems) => {
+    let next = itemsRef.current;
     let blockedCount = 0;
     let clampedCount = 0;
     let addedCount = 0;
 
-    setItems((prev) => {
-      let next = [...prev];
-
-      for (const item of newItems) {
-        const idx = next.findIndex((i) => sameLine(i, item));
-        const stockLimit = typeof item.stock === 'number' ? item.stock : Infinity;
-
-        if (idx > -1) {
-          const currentQty = next[idx].qty;
-          if (currentQty >= stockLimit) {
-            blockedCount++;
-            continue;
-          }
-          const desiredQty = currentQty + item.qty;
-          const finalQty = Math.min(desiredQty, stockLimit);
-          if (finalQty < desiredQty) clampedCount++;
-          next[idx] = {
-            ...next[idx],
-            qty: finalQty,
-            stock: stockLimit,
-            pieces: item.pieces ?? next[idx].pieces,
-          };
-          addedCount++;
-          continue;
-        }
-
-        if (stockLimit <= 0) {
-          blockedCount++;
-          continue;
-        }
-
-        const finalQty = Math.min(item.qty, stockLimit);
-        if (finalQty < item.qty) clampedCount++;
-        next = [...next, { ...item, qty: finalQty }];
+    for (const item of newItems) {
+      const { list, status } = mergeLine(next, item);
+      next = list;
+      if (status === 'blocked') blockedCount++;
+      else {
         addedCount++;
+        if (status === 'clamped') clampedCount++;
       }
+    }
 
-      return next;
-    });
+    if (next !== itemsRef.current) commit(next);
 
     if (addedCount === 0 && blockedCount > 0) {
       brandToast('Sorry, those items are out of stock', {
@@ -195,85 +177,75 @@ export function CartProvider({ children }) {
     }
 
     if (clampedCount > 0 || blockedCount > 0) {
-      brandToast('Added to cart — some quantities were limited by stock', {
-        icon: '⚠️',
-        style: { ...toastBase.style, borderLeftColor: PEACH_LIGHT },
-      });
+      brandToast('Added to cart. Some quantities were limited by stock', { icon: '⚠️', style: warnStyle });
       return;
     }
 
-    brandToast('Added to cart', {
-      icon: '✓',
-      style: { ...toastBase.style, borderLeftColor: PEACH },
-    });
-  }, []);
+    brandToast('Added to cart', { icon: '✓' });
+  }, [commit]);
 
   const updateQty = useCallback((key, qty) => {
-    setItems((prev) =>
-      prev.map((i) => {
-        if (cartKey(i) !== key) return i;
-        const max = typeof i.stock === 'number' ? i.stock : Infinity;
-        const nextQty = Math.max(1, Math.min(qty, max));
-        if (qty > max) {
-          brandToast(`Only ${max} left in stock`, {
-            icon: '⚠️',
-            style: { ...toastBase.style, borderLeftColor: PEACH_LIGHT },
-          });
-        }
-        return { ...i, qty: nextQty };
-      })
-    );
-  }, []);
+    let hitMax = null;
+
+    const next = itemsRef.current.map((i) => {
+      if (cartKey(i) !== key) return i;
+      const max = typeof i.stock === 'number' ? i.stock : Infinity;
+      if (qty > max) hitMax = max;
+      return { ...i, qty: Math.max(1, Math.min(qty, max)) };
+    });
+
+    commit(next);
+
+    if (hitMax !== null) {
+      brandToast(`Only ${hitMax} left in stock`, { icon: '⚠️', style: warnStyle });
+    }
+  }, [commit]);
 
   const removeItem = useCallback((key) => {
-    setItems((prev) => prev.filter((i) => cartKey(i) !== key));
-    brandToast('Removed from cart', {
-      icon: '🗑️',
-      style: { ...toastBase.style, borderLeftColor: PEACH_LIGHT },
-    });
-  }, []);
+    commit(itemsRef.current.filter((i) => cartKey(i) !== key));
+    brandToast('Removed from cart', { icon: '🗑️', style: warnStyle });
+  }, [commit]);
 
   const setItemStock = useCallback((key, stock) => {
-    setItems((prev) =>
-      prev.map((i) => {
+    commit(
+      itemsRef.current.map((i) => {
         if (cartKey(i) !== key) return i;
-        const nextQty = Math.max(1, Math.min(i.qty, stock));
-        return { ...i, stock, qty: nextQty };
+        return { ...i, stock, qty: Math.max(1, Math.min(i.qty, stock)) };
       })
     );
-  }, []);
+  }, [commit]);
 
   const clearCart = useCallback(() => {
-    setItems([]);
+    commit([]);
     brandToast('Cart cleared', {
       icon: '✕',
       style: { ...toastBase.style, borderLeftColor: SAGE },
     });
-  }, []);
+  }, [commit]);
 
-  const subtotal    = items.reduce((s, i) => s + i.price * i.qty, 0);
-  const count       = items.reduce((s, i) => s + i.qty, 0);
-  // Physical pieces (combo lines expand to their piece count), used for shipping weight.
-  const totalPieces = totalPiecesOf(items);
+  // Memoized so components using useCart() only re-render when the cart changes,
+  // not every time the provider re-renders.
+  const value = useMemo(() => {
+    const subtotal = items.reduce((s, i) => s + i.price * i.qty, 0);
+    const count = items.reduce((s, i) => s + i.qty, 0);
+    // Physical pieces (combo lines expand to their piece count), used for shipping weight.
+    const totalPieces = totalPiecesOf(items);
 
-  return (
-    <CartContext.Provider
-      value={{
-        items,
-        addItem,
-        addItems,
-        updateQty,
-        removeItem,
-        setItemStock,
-        clearCart,
-        subtotal,
-        count,
-        totalPieces,
-      }}
-    >
-      {children}
-    </CartContext.Provider>
-  );
+    return {
+      items,
+      addItem,
+      addItems,
+      updateQty,
+      removeItem,
+      setItemStock,
+      clearCart,
+      subtotal,
+      count,
+      totalPieces,
+    };
+  }, [items, addItem, addItems, updateQty, removeItem, setItemStock, clearCart]);
+
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
 
 export function cartKey(i) {

@@ -3,10 +3,9 @@
 @tailwind utilities;
 
 :root {
-  --font-display: 'Poppins', sans-serif;
-  --font-body: 'Poppins', sans-serif;
+  /* Fonts (--font-display and --font-body are set by next/font in layout.js) */
 
-  /* Brand Colors — white + peach minimalist */
+  /* Brand Colors: white + peach minimalist */
   --brand-peach: #D9946A;
   --brand-peach-dark: #C17F55;
   --brand-peach-light: #FBE8D9;
@@ -27,7 +26,7 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Scrollbar — peach thumb on white track */
+/* Scrollbar: peach thumb on white track */
 ::-webkit-scrollbar {
   height: 6px;
   width: 6px;
@@ -46,7 +45,7 @@ body {
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* Primary button — solid peach, flat minimalist radius */
+/* Primary button: solid peach, flat minimalist radius */
 .btn-primary {
   background: var(--brand-peach);
   color: #fff;
@@ -66,8 +65,7 @@ body {
   cursor: not-allowed;
 }
 
-/* Secondary button — same shape as primary, kept as an alias so
-   existing btn-secondary references (bulk-add, etc.) still resolve */
+/* Secondary button: kept as an alias so existing btn-secondary references still resolve */
 .btn-secondary {
   background: #fff;
   color: var(--brand-ink);
@@ -84,8 +82,7 @@ body {
   border-color: var(--brand-peach);
 }
 
-/* Outline button — ink border, flips to solid ink on hover so it reads
-   as a clear secondary action without competing with the peach accent */
+/* Outline button: ink border, flips to solid ink on hover */
 .btn-outline {
   border: 1px solid var(--brand-ink);
   color: var(--brand-ink);
@@ -138,7 +135,7 @@ body {
   border-color: var(--brand-border);
 }
 
-/* Subtle divider — use as <div class="gold-divider"> */
+/* Subtle divider: use as <div class="gold-divider"> */
 .gold-divider {
   height: 1px;
   background: #f0f0f0;

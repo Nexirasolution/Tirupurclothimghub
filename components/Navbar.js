@@ -21,12 +21,10 @@ const SHOP_GROUPS = [
   { key: 'newarrival', label: 'New Arrivals', qs: 'flag=newarrival' },
 ];
 
-export default function Navbar() {
-  // Main categories only, each carrying its own `subcategories` array
-  // (as returned by /api/categories' `topLevel` field), so the Shop menu
-  // can nest subcategories under their parent instead of listing every
-  // category flat.
-  const [categories, setCategories] = useState([]);
+// `categories` = main categories, each with its own `subcategories` array.
+// It is loaded and cached on the server (see lib/navCategories.js and the shop
+// layout), so the browser no longer calls /api/categories on every page view.
+export default function Navbar({ categories = [] }) {
   const [query, setQuery] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const [shopOpen, setShopOpen] = useState(false);
@@ -40,13 +38,6 @@ export default function Navbar() {
   const { count } = useCart();
   const { wishlist } = useWishlist();
   const wishlistCount = wishlist?.length || 0;
-
-  useEffect(() => {
-    fetch('/api/categories')
-      .then((r) => r.json())
-      .then((d) => setCategories(d.topLevel || []))
-      .catch(() => {});
-  }, []);
 
   // Lock background scroll while the full-screen mobile menu is open,
   // so the homepage doesn't scroll/run underneath it.
@@ -148,6 +139,7 @@ export default function Navbar() {
                                 <div key={c._id}>
                                   <Link
                                     href={categoryHref(c.slug, group.qs)}
+                                    prefetch={false}
                                     onClick={() => setShopOpen(false)}
                                     className="py-0.5 text-[13px] font-medium tracking-wide transition-colors block"
                                     style={{ color: COFFEE }}
@@ -163,6 +155,7 @@ export default function Navbar() {
                                         <Link
                                           key={sub._id}
                                           href={categoryHref(sub.slug, group.qs)}
+                                          prefetch={false}
                                           onClick={() => setShopOpen(false)}
                                           className="py-1 text-[12px] tracking-wide transition-colors"
                                           style={{ color: COFFEE_FAINT }}
@@ -197,7 +190,15 @@ export default function Navbar() {
             {/* Center: logo */}
             <Link href="/" className="flex items-center justify-self-center">
               <div className="relative w-28 h-28 sm:w-36 sm:h-36">
-                <Image src="/logo.png" alt="Tirupur Clothing Hub" fill className="object-contain" priority />
+                {/* `sizes` stops Next from generating huge srcset variants for a small logo */}
+                <Image
+                  src="/logo.png"
+                  alt="Tirupur Clothing Hub"
+                  fill
+                  sizes="(min-width: 640px) 144px, 112px"
+                  className="object-contain"
+                  priority
+                />
               </div>
             </Link>
 
@@ -268,7 +269,7 @@ export default function Navbar() {
         </div>
       </header>
 
-      {/* Mobile menu — full-screen overlay, not inline, so the homepage
+      {/* Mobile menu: full-screen overlay, not inline, so the homepage
           doesn't sit (or scroll) behind it while open. */}
       {menuOpen && (
         <div
@@ -281,7 +282,13 @@ export default function Navbar() {
             style={{ borderBottom: `1px solid ${HAIRLINE}` }}
           >
             <div className="relative w-16 h-16">
-              <Image src="/logo.png" alt="Tirupur Clothing Hub" fill className="object-contain" />
+              <Image
+                src="/logo.png"
+                alt="Tirupur Clothing Hub"
+                fill
+                sizes="64px"
+                className="object-contain"
+              />
             </div>
             <button
               className="p-2 -mr-2"
@@ -293,7 +300,7 @@ export default function Navbar() {
             </button>
           </div>
 
-          {/* Scrollable menu body — only this area scrolls, page behind stays fixed */}
+          {/* Scrollable menu body: only this area scrolls, page behind stays fixed */}
           <nav className="flex-1 overflow-y-auto flex flex-col px-6 py-2">
             <Link
               href="/"
@@ -340,6 +347,7 @@ export default function Navbar() {
                           <div className="flex items-center">
                             <Link
                               href={categoryHref(c.slug, group.qs)}
+                              prefetch={false}
                               onClick={closeMobileMenu}
                               className="flex-1 py-2.5 pl-6 text-[13px] tracking-wide"
                               style={{ color: COFFEE_FAINT }}
@@ -371,6 +379,7 @@ export default function Navbar() {
                                 <Link
                                   key={sub._id}
                                   href={categoryHref(sub.slug, group.qs)}
+                                  prefetch={false}
                                   onClick={closeMobileMenu}
                                   className="py-2 pl-10 text-[12.5px] tracking-wide"
                                   style={{ color: COFFEE_FAINT }}

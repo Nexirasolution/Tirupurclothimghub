@@ -9,6 +9,7 @@ import { Star, ShoppingBag, Zap, Heart, Share2, ChevronLeft, ChevronRight } from
 import { formatINR } from '@/lib/utils';
 import { getSizeStock, getCombinedStock } from '@/lib/stock';
 import { useCart } from '@/components/CartContext';
+import { useWishlist } from '@/components/WhishlistContext';
 import ColorSizeSelector from '@/components/ColorSizeSelector';
 import ProductCard from '@/components/ProductCard';
 import { display, body } from '@/lib/fonts';
@@ -18,7 +19,7 @@ import toast from 'react-hot-toast';
 const SizeChartModal = dynamic(() => import('@/components/SizeChartModal'), { ssr: false });
 const Lightbox = dynamic(() => import('@/components/Lightbox'), { ssr: false });
 
-// Design tokens — minimalist white/peach system.
+// Design tokens: minimalist white/peach system.
 const INK = '#241B21';
 const INK_SOFT = '#9C877D';
 const PEACH = '#D9946A';
@@ -27,12 +28,16 @@ const LINE = '#EEE3DA';
 const PAPER = '#FFFFFF';
 const NEUTRAL = '#C7B9AC';
 
-// Gallery auto-advance interval (ms)
+// Gallery auto-advance. Off by default: with autoplay every visitor downloads
+// every product image one after another (more data, more image transformations)
+// even if they never look at them. Set to true to turn it back on.
+const AUTOPLAY_ENABLED = false;
 const AUTOPLAY_MS = 4000;
 
 export default function ProductClient({ data }) {
   const router = useRouter();
   const { addItem } = useCart();
+  const { isWishlisted, toggleWishlist } = useWishlist();
   const { product, reviews, related } = data;
 
   const [activeVariant, setActiveVariant] = useState(product.variants?.[0] ?? null);
@@ -43,11 +48,13 @@ export default function ProductClient({ data }) {
   const [activePantId, setActivePantId] = useState('');
   const [activeShawlId, setActiveShawlId] = useState('');
   const [qty, setQty] = useState(1);
-  const [wished, setWished] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [lightboxImg, setLightboxImg] = useState(null);
   const [sizeChartOpen, setSizeChartOpen] = useState(false);
   const [paused, setPaused] = useState(false);
+
+  // Same id the product cards use, so the heart state matches everywhere
+  const wished = isWishlisted(product._id);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -107,14 +114,14 @@ export default function ProductClient({ data }) {
   const prevImage = () => setActiveImage((i) => (i === 0 ? images.length - 1 : i - 1));
   const nextImage = () => setActiveImage((i) => (i === images.length - 1 ? 0 : i + 1));
 
-  // ── Auto carousel ──
-  // Runs only when there is more than one image. Pauses while the user hovers,
-  // touches, or has a modal open, and is skipped for reduced-motion users.
-  // Depending on activeImage restarts the timer after any manual change.
+  // ── Auto carousel (see AUTOPLAY_ENABLED above) ──
+  // Pauses while the user hovers, touches, or has a modal open, and is skipped
+  // for reduced-motion users. Depending on activeImage restarts the timer
+  // after any manual change.
   const imageCount = images.length;
   const modalOpen = !!lightboxImg || sizeChartOpen;
   useEffect(() => {
-    if (imageCount < 2 || paused || modalOpen) return;
+    if (!AUTOPLAY_ENABLED || imageCount < 2 || paused || modalOpen) return;
     if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
     const id = setInterval(() => {
       if (document.hidden) return; // don't spin in background tabs
@@ -138,7 +145,7 @@ export default function ProductClient({ data }) {
   };
 
   function handleWish() {
-    setWished((w) => !w);
+    toggleWishlist(product._id);
     toast.success(wished ? 'Removed from wishlist' : 'Added to wishlist');
   }
 
@@ -245,7 +252,7 @@ export default function ProductClient({ data }) {
                   sizes="(max-width:640px) 100vw, 48vw"
                   quality={75}
                   className="object-cover"
-                  priority
+                  priority={activeImage === 0}
                 />
               )}
 
@@ -456,7 +463,7 @@ export default function ProductClient({ data }) {
               )}
             </div>
 
-            {/* Desktop CTAs — mobile uses the sticky bar */}
+            {/* Desktop CTAs: mobile uses the sticky bar */}
             <div className="hidden sm:flex flex-col gap-2.5 mt-8">
               <button
                 onClick={handleBuyNow}
@@ -489,7 +496,7 @@ export default function ProductClient({ data }) {
           </div>
         </div>
 
-        {/* Reviews — content-visibility skips rendering work until scrolled near */}
+        {/* Reviews: content-visibility skips rendering work until scrolled near */}
         {reviews?.length > 0 && (
           <div className="mt-20 sm:mt-28" style={{ contentVisibility: 'auto', containIntrinsicSize: '0 600px' }}>
             <h2 className="text-[11px] font-medium uppercase tracking-[0.18em] mb-8" style={{ color: INK }}>
@@ -545,7 +552,7 @@ export default function ProductClient({ data }) {
         )}
       </div>
 
-      {/* Sticky mobile buy bar — portaled to <body> so no ancestor breaks fixed positioning */}
+      {/* Sticky mobile buy bar: portaled to <body> so no ancestor breaks fixed positioning */}
       {mounted && createPortal(
         <div
           className="sm:hidden fixed bottom-0 left-0 right-0 flex items-center gap-3 px-5 py-3"
