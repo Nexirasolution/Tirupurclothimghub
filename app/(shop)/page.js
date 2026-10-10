@@ -210,7 +210,7 @@ export default async function HomePage() {
                 Buy together, save together
               </p>
               <Link
-                href="/combos"
+                href="/combo"
                 className="hidden sm:flex items-center gap-1 text-sm font-bold hover:gap-2 transition-all mt-3"
                 style={{ color: COFFEE, fontFamily: FONT_SANS }}
               >

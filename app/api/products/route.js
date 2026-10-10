@@ -11,13 +11,12 @@ import { generateSku } from '@/lib/sku';
 import { computeBasePrice } from '@/lib/pricing';
 import { sanitizeFreeShipping } from '@/lib/freeShipping';
 
-// GET /api/products?category=slug&size=M&minPrice=0&maxPrice=2000&sort=newest&page=1&limit=20&flag=bestseller
-// Pass limit=all to skip pagination entirely and return every matching product.
-export async function GET(req) {
+// Shared list logic. includeInactive is only ever true for admin requests.
+async function listProducts(req, includeInactive) {
   try {
     await dbConnect();
     const { searchParams } = new URL(req.url);
-    const query = { isActive: true };
+    const query = includeInactive ? {} : { isActive: true };
 
     const categorySlug = searchParams.get('category');
     if (categorySlug) {
@@ -101,12 +100,30 @@ export async function GET(req) {
         page: fetchAll ? 1 : page,
         pages: fetchAll ? 1 : Math.ceil(total / limit),
       },
-      { headers: { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120' } }
+      {
+        headers: {
+          // Never let a shared cache store admin responses (they include inactive products)
+          'Cache-Control': includeInactive
+            ? 'private, no-store'
+            : 'public, s-maxage=30, stale-while-revalidate=120',
+        },
+      }
     );
   } catch (err) {
     console.error('GET /api/products error:', err);
     return NextResponse.json({ error: err.message || 'Failed to fetch products' }, { status: 500 });
   }
+}
+
+// GET /api/products?category=slug&size=M&minPrice=0&maxPrice=2000&sort=newest&page=1&limit=20&flag=bestseller
+// limit=all        -> skip pagination, return every matching product.
+// includeInactive=1 -> admin only; also returns inactive products (for order history lookups).
+export async function GET(req) {
+  const { searchParams } = new URL(req.url);
+  if (searchParams.get('includeInactive') === '1') {
+    return requireAdmin(async (r) => listProducts(r, true))(req);
+  }
+  return listProducts(req, false);
 }
 
 export const POST = requireAdmin(async (req) => {

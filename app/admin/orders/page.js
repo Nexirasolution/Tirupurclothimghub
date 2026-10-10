@@ -77,6 +77,7 @@ export default function AdminOrdersPage() {
     setLoading(true);
     try {
       const params = new URLSearchParams();
+      params.set('all', '1'); // fetch every matching order; pagination happens below
       if (status) params.set('status', status);
       if (search) params.set('search', search);
       const res = await fetch(`/api/orders?${params.toString()}`);
@@ -98,7 +99,8 @@ export default function AdminOrdersPage() {
   useEffect(() => { load(); }, [status]);
 
   useEffect(() => {
-    fetch('/api/products?limit=200')
+    // Every product (incl. inactive) so older orders' items still resolve.
+    fetch('/api/products?limit=all&includeInactive=1')
       .then(async (r) => (r.ok ? r.json() : { products: [] }))
       .then((d) => setProducts(d.products || []))
       .catch((err) => console.error('Failed to load products', err));
@@ -152,7 +154,7 @@ export default function AdminOrdersPage() {
     });
   }, [enrichedOrders, categoryFilter, categories, dateFrom, dateTo]);
 
-  // ── Pagination (applied after the category filter) ──
+  // ── Pagination (applied after the category/date filters) ──
   const totalOrders = filteredOrders.length;
   const totalPages = Math.max(1, Math.ceil(totalOrders / pageSize));
   const currentPage = Math.min(page, totalPages); // clamp if data shrinks
